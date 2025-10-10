@@ -39,6 +39,6 @@ public class TssMessageConsumer {
     ))
     public void initTssMessage(InitProtocolCommand command) {
         log.info("프로토콜 시작 메시지 수신");
-        tssService.checkInitProtocolStatus(command.sid(), command.type());
+        tssService.checkInitProtocolStatus(command.sid(), command.memberId(), command.type());
     }
 }
