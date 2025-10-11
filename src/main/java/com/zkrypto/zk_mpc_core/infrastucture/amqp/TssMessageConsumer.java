@@ -3,8 +3,8 @@ package com.zkrypto.zk_mpc_core.infrastucture.amqp;
 
 import com.zkrypto.zk_mpc_core.application.tss.TssService;
 import com.zkrypto.zk_mpc_core.common.config.RabbitMqConfig;
-import com.zkrypto.zk_mpc_core.infrastucture.amqp.dto.InitProtocolCommand;
-import com.zkrypto.zk_mpc_core.infrastucture.amqp.dto.ProceedRoundCommand;
+import com.zkrypto.zk_mpc_core.infrastucture.amqp.dto.InitProtocolMessage;
+import com.zkrypto.zk_mpc_core.infrastucture.amqp.dto.ProceedRoundMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.core.ExchangeTypes;
@@ -27,7 +27,7 @@ public class TssMessageConsumer {
             exchange = @Exchange(value = RabbitMqConfig.TSS_EXCHANGE, type = ExchangeTypes.TOPIC),
             key = RabbitMqConfig.TSS_DELIVER_ROUTING_KEY_PREFIX
     ))
-    public void handleRoundMessage(ProceedRoundCommand command) {
+    public void handleRoundMessage(ProceedRoundMessage command) {
         log.info("라운드 메시지 수신");
         tssService.collectMessageAndCheckCompletion(command.type(), command.message(), command.sid());
     }
@@ -37,7 +37,7 @@ public class TssMessageConsumer {
             exchange = @Exchange(value = RabbitMqConfig.TSS_EXCHANGE, type = ExchangeTypes.TOPIC),
             key = RabbitMqConfig.TSS_INIT_ROUTING_KEY_PREFIX
     ))
-    public void initTssMessage(InitProtocolCommand command) {
+    public void initTssMessage(InitProtocolMessage command) {
         log.info("프로토콜 시작 메시지 수신");
         tssService.checkInitProtocolStatus(command.sid(), command.memberId(), command.type());
     }

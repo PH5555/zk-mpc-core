@@ -2,10 +2,12 @@ package com.zkrypto.zk_mpc_core.application.tss;
 
 import com.zkrypto.zk_mpc_core.application.group.port.out.GroupPort;
 import com.zkrypto.zk_mpc_core.application.message.MessageBroker;
+import com.zkrypto.zk_mpc_core.application.message.dto.MessageProcessEndEvent;
 import com.zkrypto.zk_mpc_core.application.session.FactorySessionService;
 import com.zkrypto.zk_mpc_core.application.session.MessageSessionService;
 import com.zkrypto.zk_mpc_core.application.tss.constant.ParticipantType;
 import com.zkrypto.zk_mpc_core.application.tss.dto.ContinueMessage;
+import com.zkrypto.zk_mpc_core.application.message.dto.InitProtocolEndEvent;
 import com.zkrypto.zk_mpc_core.common.util.JsonUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -29,7 +31,7 @@ public class TssService {
      * @param message 메시지 내용
      * @param sid 그룹 id
      */
-    public void collectMessageAndCheckCompletion(String type, String message, String sid) {
+    public void collectMessageAndCheckCompletion(ParticipantType type, String message, String sid) {
         // ContinueMessage 파싱
         ContinueMessage continueMessage = (ContinueMessage)JsonUtil.parse(message, ContinueMessage.class);
 
@@ -65,7 +67,8 @@ public class TssService {
 
         // 임계치보다 팩토리 생성자가 많아지면 프로토콜 시작 메시지 전송
         if(factorySessionService.getSessionCount(sid) >= threshold) {
-            tssMessageBroker.publish();
+            InitProtocolEndEvent event = InitProtocolEndEvent.builder().sid(sid).type(type).build();
+            tssMessageBroker.publish(event);
         }
     }
 
@@ -77,7 +80,7 @@ public class TssService {
      * @param type 프로토콜 타입
      * @param sid 그룹 id
      */
-    private void sendAllMessages(List<ContinueMessage> continueMessages, String type, String sid) {
+    private void sendAllMessages(List<ContinueMessage> continueMessages, ParticipantType type, String sid) {
         // broadcast 먼저 처리하도록 정렬
         log.info("broadcast 정렬");
         continueMessages.sort(Comparator.comparing(ContinueMessage::getIs_broadcast).reversed());
@@ -94,7 +97,7 @@ public class TssService {
      * @param type 프로토콜 타입
      * @param sid 그룹 id
      */
-    private void processAndSendMessage(ContinueMessage message, String type, String sid) {
+    private void processAndSendMessage(ContinueMessage message, ParticipantType type, String sid) {
         // 메시지 수신자 결정
         List<String> recipients = message.getIs_broadcast()
                 ? groupPort.getGroupMemberIds(sid).stream().filter(mid -> !mid.equals(message.getFrom().toString())).toList() // Is_broadcast이면 보내는 사람을 제외한 모든 참여자
@@ -103,7 +106,8 @@ public class TssService {
         // 각 수신자에게 메시지 전송
         recipients.forEach(recipient -> {
             log.info("메시지 전송 to :" + recipient + " message: " + JsonUtil.toString(message).substring(0, 30) + "...");
-            tssMessageBroker.publish(recipient, JsonUtil.toString(message), type, sid);
+            MessageProcessEndEvent event = MessageProcessEndEvent.builder().recipient(recipient).message(JsonUtil.toString(message)).type(type).sid(sid).build();
+            tssMessageBroker.publish(event);
         });
     }
 }

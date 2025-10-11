@@ -1,5 +1,9 @@
 package com.zkrypto.zk_mpc_core.application.message;
 
+import com.zkrypto.zk_mpc_core.application.message.dto.InitProtocolEndEvent;
+import com.zkrypto.zk_mpc_core.application.message.dto.MessageProcessEndEvent;
+
 public interface MessageBroker {
-    void publish(String recipient, String message, String type, String sid);
+    void publish(MessageProcessEndEvent event);
+    void publish(InitProtocolEndEvent event);
 }

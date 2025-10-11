@@ -1,10 +1,11 @@
-package com.zkrypto.zk_mpc_core.infrastucture.amqp.dto;
+package com.zkrypto.zk_mpc_core.application.message.dto;
 
 import com.zkrypto.zk_mpc_core.application.tss.constant.ParticipantType;
+import lombok.Builder;
 
-public record InitProtocolCommand(
+@Builder
+public record InitProtocolEndEvent(
         String sid,
-        String memberId,
         ParticipantType type
 ) {
 }

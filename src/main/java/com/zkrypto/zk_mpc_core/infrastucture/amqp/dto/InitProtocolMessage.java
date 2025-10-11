@@ -1,0 +1,10 @@
+package com.zkrypto.zk_mpc_core.infrastucture.amqp.dto;
+
+import com.zkrypto.zk_mpc_core.application.tss.constant.ParticipantType;
+
+public record InitProtocolMessage(
+        String sid,
+        String memberId,
+        ParticipantType type
+) {
+}
