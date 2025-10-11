@@ -17,7 +17,7 @@ import org.springframework.stereotype.Component;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class TssMessageConsumer {
+public class MessageConsumer {
 
     private final TssService tssService;
 

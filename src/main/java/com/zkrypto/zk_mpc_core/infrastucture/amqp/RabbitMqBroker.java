@@ -13,7 +13,7 @@ import org.springframework.stereotype.Component;
 
 @Component
 @RequiredArgsConstructor
-public class RabbitMqTssBroker implements MessageBroker {
+public class RabbitMqBroker implements MessageBroker {
 
     private final RabbitTemplate rabbitTemplate;
 
