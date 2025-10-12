@@ -22,8 +22,11 @@ public class RabbitMqConfig {
     private String password;
 
     public static final String TSS_EXCHANGE = "tss.exchange";
-    public static final String TSS_DELIVER_ROUTING_KEY_PREFIX = "topic.deliver";
+    public static final String TSS_ROUND_END_ROUTING_KEY_PREFIX = "topic.round.end";
+    public static final String TSS_ROUND_ROUTING_KEY_PREFIX = "topic.round";
     public static final String TSS_INIT_ROUTING_KEY_PREFIX = "topic.init";
+    public static final String TSS_INIT_END_ROUTING_KEY_PREFIX = "topic.init.end";
+    public static final String TSS_START_ROUTING_KEY_PREFIX = "topic.start";
 
     @Bean
     public TopicExchange tssExchange() {

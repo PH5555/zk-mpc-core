@@ -4,11 +4,9 @@ import com.zkrypto.zk_mpc_core.application.tss.constant.ParticipantType;
 import lombok.Builder;
 
 @Builder
-public record InitProtocolMessage(
-        ParticipantType participantType,
+public record InitProtocolCompleteMessage(
+        ParticipantType type,
         String sid,
-        String[] otherIds,
-        Integer threshold,
-        byte[] messageBytes
+        String memberId
 ) {
 }

@@ -2,6 +2,7 @@ package com.zkrypto.zk_mpc_core.application.tss;
 
 import com.zkrypto.zk_mpc_core.application.group.port.out.GroupPort;
 import com.zkrypto.zk_mpc_core.application.message.MessageBroker;
+import com.zkrypto.zk_mpc_core.application.message.dto.InitKeyShareProtocolEvent;
 import com.zkrypto.zk_mpc_core.application.message.dto.MessageProcessEndEvent;
 import com.zkrypto.zk_mpc_core.application.session.FactorySessionService;
 import com.zkrypto.zk_mpc_core.application.session.MessageSessionService;
@@ -9,6 +10,7 @@ import com.zkrypto.zk_mpc_core.application.tss.constant.ParticipantType;
 import com.zkrypto.zk_mpc_core.application.tss.dto.ContinueMessage;
 import com.zkrypto.zk_mpc_core.application.message.dto.InitProtocolEndEvent;
 import com.zkrypto.zk_mpc_core.common.util.JsonUtil;
+import com.zkrypto.zk_mpc_core.infrastucture.web.dto.InitProtocolCommand;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -107,6 +109,19 @@ public class TssService {
         recipients.forEach(recipient -> {
             log.info("메시지 전송 to :" + recipient + " message: " + JsonUtil.toString(message).substring(0, 30) + "...");
             MessageProcessEndEvent event = MessageProcessEndEvent.builder().recipient(recipient).message(JsonUtil.toString(message)).type(type).sid(sid).build();
+            tssMessageBroker.publish(event);
+        });
+    }
+
+    /**
+     * 프로토콜을 시작하는 메서드입니다.
+     * 프로토콜 참여자 모두에게 시작 메시지를 전송합니다.
+     * @param command
+     */
+    public void initKeyShareProtocol(InitProtocolCommand command) {
+        command.memberIds().forEach(recipient -> {
+            String[] otherIds = (String[])command.memberIds().stream().filter(id -> !id.equals(recipient)).toList().toArray();
+            InitKeyShareProtocolEvent event = InitKeyShareProtocolEvent.builder().participantType(command.type()).sid(command.sid()).otherIds(otherIds).build();
             tssMessageBroker.publish(event);
         });
     }

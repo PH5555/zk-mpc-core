@@ -3,6 +3,7 @@ package com.zkrypto.zk_mpc_core.infrastucture.amqp;
 
 import com.zkrypto.zk_mpc_core.application.tss.TssService;
 import com.zkrypto.zk_mpc_core.common.config.RabbitMqConfig;
+import com.zkrypto.zk_mpc_core.infrastucture.amqp.dto.InitProtocolCompleteMessage;
 import com.zkrypto.zk_mpc_core.infrastucture.amqp.dto.InitProtocolMessage;
 import com.zkrypto.zk_mpc_core.infrastucture.amqp.dto.ProceedRoundMessage;
 import lombok.RequiredArgsConstructor;
@@ -21,24 +22,23 @@ public class MessageConsumer {
 
     private final TssService tssService;
 
-    //TODO: 메시지 key 수정
     @RabbitListener(bindings = @QueueBinding(
             value = @Queue(value = "", durable = "true", exclusive = "true", autoDelete = "false"),
             exchange = @Exchange(value = RabbitMqConfig.TSS_EXCHANGE, type = ExchangeTypes.TOPIC),
-            key = RabbitMqConfig.TSS_DELIVER_ROUTING_KEY_PREFIX
+            key = RabbitMqConfig.TSS_ROUND_END_ROUTING_KEY_PREFIX
     ))
-    public void handleRoundMessage(ProceedRoundMessage command) {
+    public void handleRoundEndMessage(ProceedRoundMessage message) {
         log.info("라운드 메시지 수신");
-        tssService.collectMessageAndCheckCompletion(command.type(), command.message(), command.sid());
+        tssService.collectMessageAndCheckCompletion(message.type(), message.message(), message.sid());
     }
 
     @RabbitListener(bindings = @QueueBinding(
             value = @Queue(value = "", durable = "true", exclusive = "true", autoDelete = "false"),
             exchange = @Exchange(value = RabbitMqConfig.TSS_EXCHANGE, type = ExchangeTypes.TOPIC),
-            key = RabbitMqConfig.TSS_INIT_ROUTING_KEY_PREFIX
+            key = RabbitMqConfig.TSS_INIT_END_ROUTING_KEY_PREFIX
     ))
-    public void initTssMessage(InitProtocolMessage command) {
-        log.info("프로토콜 시작 메시지 수신");
-        tssService.checkInitProtocolStatus(command.sid(), command.memberId(), command.type());
+    public void handleInitProtocolEndMessage(InitProtocolCompleteMessage message) {
+        log.info("프로토콜 시작 완료 메시지 수신");
+        tssService.checkInitProtocolStatus(message.sid(), message.memberId(), message.type());
     }
 }
