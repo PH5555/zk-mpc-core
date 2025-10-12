@@ -4,9 +4,10 @@ import com.zkrypto.zk_mpc_core.application.tss.constant.ParticipantType;
 import jakarta.validation.constraints.NotNull;
 import java.util.List;
 
-public record InitProtocolCommand(
+public record InitKeyShareProtocolCommand(
         @NotNull ParticipantType type,
         @NotNull String sid,
-        @NotNull List<String> memberIds
+        @NotNull List<String> memberIds,
+        @NotNull Integer threshold
 ) {
 }

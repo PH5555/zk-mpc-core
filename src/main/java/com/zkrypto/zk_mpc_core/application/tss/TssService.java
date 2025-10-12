@@ -3,6 +3,7 @@ package com.zkrypto.zk_mpc_core.application.tss;
 import com.zkrypto.zk_mpc_core.application.group.port.out.GroupPort;
 import com.zkrypto.zk_mpc_core.application.message.MessageBroker;
 import com.zkrypto.zk_mpc_core.application.message.dto.InitKeyShareProtocolEvent;
+import com.zkrypto.zk_mpc_core.application.message.dto.InitSignProtocolEvent;
 import com.zkrypto.zk_mpc_core.application.message.dto.MessageProcessEndEvent;
 import com.zkrypto.zk_mpc_core.application.session.FactorySessionService;
 import com.zkrypto.zk_mpc_core.application.session.MessageSessionService;
@@ -10,7 +11,8 @@ import com.zkrypto.zk_mpc_core.application.tss.constant.ParticipantType;
 import com.zkrypto.zk_mpc_core.application.tss.dto.ContinueMessage;
 import com.zkrypto.zk_mpc_core.application.message.dto.InitProtocolEndEvent;
 import com.zkrypto.zk_mpc_core.common.util.JsonUtil;
-import com.zkrypto.zk_mpc_core.infrastucture.web.dto.InitProtocolCommand;
+import com.zkrypto.zk_mpc_core.infrastucture.web.dto.InitKeyShareProtocolCommand;
+import com.zkrypto.zk_mpc_core.infrastucture.web.dto.InitSignProtocolCommand;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -69,10 +71,19 @@ public class TssService {
 
         // 임계치보다 팩토리 생성자가 많아지면 프로토콜 시작 메시지 전송
         if(factorySessionService.getSessionCount(sid) >= threshold) {
-            InitProtocolEndEvent event = InitProtocolEndEvent.builder().sid(sid).type(type).build();
-            tssMessageBroker.publish(event);
+            factorySessionService.getAllSession(sid).forEach(recipient -> {
+                InitProtocolEndEvent event = InitProtocolEndEvent.builder()
+                        .sid(sid)
+                        .type(type)
+                        .recipient(recipient)
+                        .build();
+                tssMessageBroker.publish(event);
+            });
+
         }
     }
+
+    //TODO: 마지막 메시지 받아서 다음 스텝 진행할 수 있도록
 
     /**
      * 현재 라운드의 모든 메시지를 전송하는 메서드입니다.
@@ -108,20 +119,51 @@ public class TssService {
         // 각 수신자에게 메시지 전송
         recipients.forEach(recipient -> {
             log.info("메시지 전송 to :" + recipient + " message: " + JsonUtil.toString(message).substring(0, 30) + "...");
-            MessageProcessEndEvent event = MessageProcessEndEvent.builder().recipient(recipient).message(JsonUtil.toString(message)).type(type).sid(sid).build();
+            MessageProcessEndEvent event = MessageProcessEndEvent.builder()
+                    .recipient(recipient)
+                    .message(JsonUtil.toString(message))
+                    .type(type)
+                    .sid(sid)
+                    .build();
             tssMessageBroker.publish(event);
         });
     }
 
     /**
-     * 프로토콜을 시작하는 메서드입니다.
+     * 키 생성 프로토콜을 시작하는 메서드입니다.
      * 프로토콜 참여자 모두에게 시작 메시지를 전송합니다.
      * @param command
      */
-    public void initKeyShareProtocol(InitProtocolCommand command) {
+    public void initKeyShareProtocol(InitKeyShareProtocolCommand command) {
         command.memberIds().forEach(recipient -> {
             String[] otherIds = (String[])command.memberIds().stream().filter(id -> !id.equals(recipient)).toList().toArray();
-            InitKeyShareProtocolEvent event = InitKeyShareProtocolEvent.builder().participantType(command.type()).sid(command.sid()).otherIds(otherIds).build();
+            InitKeyShareProtocolEvent event = InitKeyShareProtocolEvent.builder()
+                    .participantType(command.type())
+                    .sid(command.sid())
+                    .otherIds(otherIds)
+                    .recipient(recipient)
+                    .threshold(command.threshold())
+                    .build();
+            tssMessageBroker.publish(event);
+        });
+    }
+
+    /**
+     * 서명 프로토콜을 시작하는 메서드입니다.
+     * 프로토콜 참여자 모두에게 시작 메시지를 전송합니다.
+     * @param command
+     */
+    public void initSignProtocol(InitSignProtocolCommand command) {
+        command.memberIds().forEach(recipient -> {
+            String[] otherIds = (String[])command.memberIds().stream().filter(id -> !id.equals(recipient)).toList().toArray();
+            InitSignProtocolEvent event = InitSignProtocolEvent.builder()
+                    .participantType(command.type())
+                    .sid(command.sid())
+                    .otherIds(otherIds)
+                    .threshold(command.threshold())
+                    .messageBytes(command.messageBytes())
+                    .recipient(recipient)
+                    .build();
             tssMessageBroker.publish(event);
         });
     }

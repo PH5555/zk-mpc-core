@@ -2,10 +2,8 @@ package com.zkrypto.zk_mpc_core.application.session;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
@@ -16,6 +14,10 @@ public class FactorySessionService {
     public void addSession(String groupId, String memberId) {
         session.compute(groupId, (k, v) -> (v == null) ? new HashSet<>() : v).add(memberId);
         log.info("{} 팩토리 세션 추가", groupId);
+    }
+
+    public List<String> getAllSession(String groupId) {
+        return session.getOrDefault(groupId, new HashSet<>()).stream().toList();
     }
 
     public void clearSession(String groupId) {
