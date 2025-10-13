@@ -3,6 +3,7 @@ package com.zkrypto.zk_mpc_core.application.tss.constant;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
+import java.util.Arrays;
 import java.util.Optional;
 
 @Getter
@@ -35,6 +36,20 @@ public enum ParticipantType {
             // TSHARE, SIGN, TREFRESH 는 각 프로세스의 마지막 단계이므로 다음이 없음
             default -> Optional.empty();
         };
+    }
+
+    /**
+     * 주어진 ProcessGroup에 해당하는 첫 번째 ParticipantType을 반환합니다.
+     * enum에 정의된 순서를 기준으로 첫 번째 요소를 찾습니다.
+     * @param process 찾고자 하는 프로세스 그룹
+     * @return 해당 그룹의 첫 번째 ParticipantType
+     * @throws IllegalArgumentException 주어진 그룹에 해당하는 타입이 없을 경우
+     */
+    public static ParticipantType getFirstStep(ProcessGroup process) {
+        return Arrays.stream(values())
+                .filter(type -> type.getProcessGroup() == process)
+                .findFirst()
+                .orElseThrow(() -> new RuntimeException("group에 해당하는 participantType이 없습니다."));
     }
 }
 

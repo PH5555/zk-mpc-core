@@ -1,24 +1,25 @@
 package com.zkrypto.zk_mpc_core.application.tss;
 
-import com.zkrypto.zk_mpc_core.application.group.port.out.GroupPort;
 import com.zkrypto.zk_mpc_core.application.message.MessageBroker;
-import com.zkrypto.zk_mpc_core.application.message.dto.InitKeyShareProtocolEvent;
-import com.zkrypto.zk_mpc_core.application.message.dto.InitSignProtocolEvent;
+import com.zkrypto.zk_mpc_core.application.message.dto.InitProtocolEvent;
 import com.zkrypto.zk_mpc_core.application.message.dto.MessageProcessEndEvent;
+import com.zkrypto.zk_mpc_core.application.session.CompleteStatusSessionService;
 import com.zkrypto.zk_mpc_core.application.session.FactorySessionService;
 import com.zkrypto.zk_mpc_core.application.session.MessageSessionService;
+import com.zkrypto.zk_mpc_core.application.session.ProtocolSessionService;
 import com.zkrypto.zk_mpc_core.application.tss.constant.ParticipantType;
 import com.zkrypto.zk_mpc_core.application.tss.dto.ContinueMessage;
 import com.zkrypto.zk_mpc_core.application.message.dto.InitProtocolEndEvent;
+import com.zkrypto.zk_mpc_core.application.tss.dto.ProtocolData;
 import com.zkrypto.zk_mpc_core.common.util.JsonUtil;
-import com.zkrypto.zk_mpc_core.infrastucture.web.dto.InitKeyShareProtocolCommand;
-import com.zkrypto.zk_mpc_core.infrastucture.web.dto.InitSignProtocolCommand;
+import com.zkrypto.zk_mpc_core.infrastucture.web.dto.InitProtocolCommand;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -27,7 +28,8 @@ public class TssService {
     private final MessageBroker tssMessageBroker;
     private final MessageSessionService messageSessionService;
     private final FactorySessionService factorySessionService;
-    private final GroupPort groupPort;
+    private final CompleteStatusSessionService completeStatusSessionService;
+    private final ProtocolSessionService protocolSessionService;
 
     /**
      * 라운드 메시지 상태를 확인하고 임계치를 만족하면 메시지를 처리하는 메서드입니다.
@@ -45,13 +47,13 @@ public class TssService {
         // 세션에 현재 메시지 추가
         messageSessionService.addSession(sid, roundName, continueMessage);
 
-        // 현재 그룹의 임계치 조회
-        int threshold = groupPort.getGroupThreshold(sid);
+        // 현재 그룹의 프로토콜 정보 조회
+        ProtocolData protocolData = protocolSessionService.getSession(sid);
 
         // 임계치보다 현재 라운드의 메시지가 많아지면 메시지 전송
-        if(messageSessionService.getSessionCount(sid, roundName) >= threshold) {
+        if(messageSessionService.getSessionCount(sid, roundName) >= protocolData.getThreshold()) {
             List<ContinueMessage> currentRoundMessages = messageSessionService.getSessionMessage(sid, roundName);
-            sendAllMessages(currentRoundMessages, type, sid);
+            sendAllMessages(currentRoundMessages, type, sid, protocolData);
         }
     }
 
@@ -66,8 +68,8 @@ public class TssService {
         // 팩토리 세션에 추가
         factorySessionService.addSession(sid, memberId);
 
-        // 현재 그룹의 임계치 조회
-        int threshold = groupPort.getGroupThreshold(sid);
+        // 현재 그룹의 프로토콜 정보 조회
+        int threshold = protocolSessionService.getSession(sid).getThreshold();
 
         // 임계치보다 팩토리 생성자가 많아지면 프로토콜 시작 메시지 전송
         if(factorySessionService.getSessionCount(sid) >= threshold) {
@@ -79,7 +81,6 @@ public class TssService {
                         .build();
                 tssMessageBroker.publish(event);
             });
-
         }
     }
 
@@ -91,14 +92,14 @@ public class TssService {
      * @param type 프로토콜 타입
      * @param sid 그룹 id
      */
-    private void sendAllMessages(List<ContinueMessage> continueMessages, ParticipantType type, String sid) {
+    private void sendAllMessages(List<ContinueMessage> continueMessages, ParticipantType type, String sid, ProtocolData protocolData) {
         // broadcast 먼저 처리하도록 정렬
         log.info("broadcast 정렬");
         continueMessages.sort(Comparator.comparing(ContinueMessage::getIs_broadcast).reversed());
 
         // 메시지 목록을 순회하며 각 메시지를 처리
         log.info("메시지 목록 순회 시작");
-        continueMessages.forEach(message -> processAndSendMessage(message, type, sid));
+        continueMessages.forEach(message -> processAndSendMessage(message, type, sid, protocolData));
     }
 
     /**
@@ -108,10 +109,10 @@ public class TssService {
      * @param type 프로토콜 타입
      * @param sid 그룹 id
      */
-    private void processAndSendMessage(ContinueMessage message, ParticipantType type, String sid) {
+    private void processAndSendMessage(ContinueMessage message, ParticipantType type, String sid, ProtocolData protocolData) {
         // 메시지 수신자 결정
         List<String> recipients = message.getIs_broadcast()
-                ? groupPort.getGroupMemberIds(sid).stream().filter(mid -> !mid.equals(message.getFrom().toString())).toList() // Is_broadcast이면 보내는 사람을 제외한 모든 참여자
+                ? protocolData.getMemberIds().stream().filter(mid -> !mid.equals(message.getFrom().toString())).toList() // Is_broadcast이면 보내는 사람을 제외한 모든 참여자
                 : List.of(message.getTo().toString()); // Is_broadcast가 false이면 한명
 
         // 각 수신자에게 메시지 전송
@@ -127,40 +128,74 @@ public class TssService {
         });
     }
 
-    //TODO: 마지막 메시지 받아서 다음 스텝 진행할 수 있도록
     /**
-     * 키 생성 프로토콜을 시작하는 메서드입니다.
-     * 프로토콜 참여자 모두에게 시작 메시지를 전송합니다.
-     * @param command
+     * 프로토콜 종료 상태를 확인하는 메서드입니다.
+     * 프로토콜 참여자 모두가 종료 상태이면 다음 프로토콜을 진행합니다.
+     * @param sid
+     * @param memberId
+     * @param type
      */
-    public void initKeyShareProtocol(InitKeyShareProtocolCommand command) {
-        command.memberIds().forEach(recipient -> {
-            String[] otherIds = (String[])command.memberIds().stream().filter(id -> !id.equals(recipient)).toList().toArray();
-            InitKeyShareProtocolEvent event = InitKeyShareProtocolEvent.builder()
-                    .participantType(command.type())
-                    .sid(command.sid())
-                    .otherIds(otherIds)
-                    .recipient(recipient)
-                    .threshold(command.threshold())
-                    .build();
-            tssMessageBroker.publish(event);
-        });
+    public void checkProtocolCompleteStatus(String sid, String memberId, ParticipantType type) {
+        // 종료 상태 세션에 추가
+        completeStatusSessionService.addSession(sid, memberId);
+
+        // 현재 그룹의 프로토콜 정보 조회
+        ProtocolData protocolData = protocolSessionService.getSession(sid);
+
+        // 임계치보다 종료 상태 세션수가 많아지면 다음 프로토콜 시작 메시지 전송
+        if(factorySessionService.getSessionCount(sid) >= protocolData.getThreshold()) {
+            processNextProtocol(type, sid, protocolData);
+        }
     }
 
     /**
-     * 서명 프로토콜을 시작하는 메서드입니다.
-     * 프로토콜 참여자 모두에게 시작 메시지를 전송합니다.
+     * 현재 프로토콜의 다음 차례 프로토콜을 시작하는 메서드입니다.
+     * @param currentType 현재 프로토콜 타입
+     * @param sid 그룹 id
+     */
+    private void processNextProtocol(ParticipantType currentType, String sid, ProtocolData protocolData) {
+        // 다음 프로토콜이 존재하는 경우 시작
+        currentType.getNextStep().ifPresent(type -> sendStartMessage(
+                protocolData.getMemberIds(),
+                type,
+                sid,
+                protocolData.getThreshold(),
+                protocolData.getMessageBytes()));
+    }
+
+    /**
+     * 프로세스 그룹에 따라서 프로토콜을 시작하는 메서드입니다.
      * @param command
      */
-    public void initSignProtocol(InitSignProtocolCommand command) {
-        command.memberIds().forEach(recipient -> {
-            String[] otherIds = (String[])command.memberIds().stream().filter(id -> !id.equals(recipient)).toList().toArray();
-            InitSignProtocolEvent event = InitSignProtocolEvent.builder()
-                    .participantType(command.type())
-                    .sid(command.sid())
+    public void initProtocol(InitProtocolCommand command) {
+        // 실행해야하는 첫번째 프로토콜 조회
+        ParticipantType participantType = ParticipantType.getFirstStep(command.process());
+
+        // 프로토콜 데이터 저장
+        ProtocolData protocolData = new ProtocolData(command.memberIds(), command.threshold(), command.messageBytes());
+        protocolSessionService.addSession(command.sid(), protocolData);
+
+        // 실행 메시지 전송
+        sendStartMessage(command.memberIds(), participantType, command.sid(), command.threshold(), command.messageBytes());
+    }
+
+    /**
+     * 프로토콜 시작 메시지를 전송하는 메서드입니다.
+     * @param memberIds 프로토콜 참여자 id
+     * @param type 프로토콜 타입
+     * @param sid 그룹 id
+     * @param threshold 임계치
+     * @param messageBytes 메시지
+     */
+    private void sendStartMessage(List<String> memberIds, ParticipantType type, String sid, Integer threshold, byte[] messageBytes) {
+        memberIds.forEach(recipient -> {
+            String[] otherIds = (String[])memberIds.stream().filter(id -> !id.equals(recipient)).toList().toArray();
+            InitProtocolEvent event = InitProtocolEvent.builder()
+                    .participantType(type)
+                    .sid(sid)
                     .otherIds(otherIds)
-                    .threshold(command.threshold())
-                    .messageBytes(command.messageBytes())
+                    .threshold(threshold)
+                    .messageBytes(messageBytes)
                     .recipient(recipient)
                     .build();
             tssMessageBroker.publish(event);

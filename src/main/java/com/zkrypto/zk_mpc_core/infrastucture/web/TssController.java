@@ -2,6 +2,7 @@ package com.zkrypto.zk_mpc_core.infrastucture.web;
 
 import com.zkrypto.zk_mpc_core.application.tss.TssService;
 import com.zkrypto.zk_mpc_core.infrastucture.web.dto.InitKeyShareProtocolCommand;
+import com.zkrypto.zk_mpc_core.infrastucture.web.dto.InitProtocolCommand;
 import com.zkrypto.zk_mpc_core.infrastucture.web.dto.InitSignProtocolCommand;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -15,15 +16,9 @@ import org.springframework.web.bind.annotation.RestController;
 public class TssController {
     private final TssService tssService;
 
-    @PostMapping("/key-share")
-    public ResponseEntity<Void> initKeyShareProtocol(InitKeyShareProtocolCommand command) {
-        tssService.initKeyShareProtocol(command);
-        return ResponseEntity.ok().build();
-    }
-
-    @PostMapping("/sign")
-    public ResponseEntity<Void> initSignProtocol(InitSignProtocolCommand command) {
-        tssService.initSignProtocol(command);
+    @PostMapping("/init")
+    public ResponseEntity<Void> initProtocol(InitProtocolCommand command) {
+        tssService.initProtocol(command);
         return ResponseEntity.ok().build();
     }
 }

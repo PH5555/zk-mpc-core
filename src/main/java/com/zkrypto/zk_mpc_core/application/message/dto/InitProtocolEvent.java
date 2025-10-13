@@ -4,7 +4,7 @@ import com.zkrypto.zk_mpc_core.application.tss.constant.ParticipantType;
 import lombok.Builder;
 
 @Builder
-public record InitSignProtocolEvent(
+public record InitProtocolEvent(
         String recipient,
         ParticipantType participantType,
         String sid,

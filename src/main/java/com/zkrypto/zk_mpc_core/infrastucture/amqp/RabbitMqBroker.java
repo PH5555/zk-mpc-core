@@ -1,9 +1,8 @@
 package com.zkrypto.zk_mpc_core.infrastucture.amqp;
 
 import com.zkrypto.zk_mpc_core.application.message.MessageBroker;
-import com.zkrypto.zk_mpc_core.application.message.dto.InitKeyShareProtocolEvent;
 import com.zkrypto.zk_mpc_core.application.message.dto.InitProtocolEndEvent;
-import com.zkrypto.zk_mpc_core.application.message.dto.InitSignProtocolEvent;
+import com.zkrypto.zk_mpc_core.application.message.dto.InitProtocolEvent;
 import com.zkrypto.zk_mpc_core.application.message.dto.MessageProcessEndEvent;
 import com.zkrypto.zk_mpc_core.common.config.RabbitMqConfig;
 import com.zkrypto.zk_mpc_core.infrastucture.amqp.dto.InitProtocolMessage;
@@ -35,14 +34,7 @@ public class RabbitMqBroker implements MessageBroker {
     }
 
     @Override
-    public void publish(InitKeyShareProtocolEvent event) {
-        String routingKey = RabbitMqConfig.TSS_INIT_ROUTING_KEY_PREFIX + event.recipient();
-        InitProtocolMessage message = MessageMapper.from(event);
-        rabbitTemplate.convertAndSend(RabbitMqConfig.TSS_EXCHANGE, routingKey, message);
-    }
-
-    @Override
-    public void publish(InitSignProtocolEvent event) {
+    public void publish(InitProtocolEvent event) {
         String routingKey = RabbitMqConfig.TSS_INIT_ROUTING_KEY_PREFIX + event.recipient();
         InitProtocolMessage message = MessageMapper.from(event);
         rabbitTemplate.convertAndSend(RabbitMqConfig.TSS_EXCHANGE, routingKey, message);
