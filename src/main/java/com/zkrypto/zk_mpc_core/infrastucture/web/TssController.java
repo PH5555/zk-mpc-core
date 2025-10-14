@@ -1,9 +1,7 @@
 package com.zkrypto.zk_mpc_core.infrastucture.web;
 
 import com.zkrypto.zk_mpc_core.application.tss.TssService;
-import com.zkrypto.zk_mpc_core.infrastucture.web.dto.InitKeyShareProtocolCommand;
 import com.zkrypto.zk_mpc_core.infrastucture.web.dto.InitProtocolCommand;
-import com.zkrypto.zk_mpc_core.infrastucture.web.dto.InitSignProtocolCommand;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;

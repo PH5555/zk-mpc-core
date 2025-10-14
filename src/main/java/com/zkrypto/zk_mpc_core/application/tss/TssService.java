@@ -16,10 +16,8 @@ import com.zkrypto.zk_mpc_core.infrastucture.web.dto.InitProtocolCommand;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-
 import java.util.Comparator;
 import java.util.List;
-import java.util.Optional;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -189,7 +187,10 @@ public class TssService {
      */
     private void sendStartMessage(List<String> memberIds, ParticipantType type, String sid, Integer threshold, byte[] messageBytes) {
         memberIds.forEach(recipient -> {
+            // 해당 메시지를 받는 사람을 제외한 otherIds 생성
             String[] otherIds = (String[])memberIds.stream().filter(id -> !id.equals(recipient)).toList().toArray();
+
+            // 메시지 전송
             InitProtocolEvent event = InitProtocolEvent.builder()
                     .participantType(type)
                     .sid(sid)

@@ -1,6 +1,5 @@
 package com.zkrypto.zk_mpc_core.infrastucture.amqp;
 
-
 import com.zkrypto.zk_mpc_core.application.tss.TssService;
 import com.zkrypto.zk_mpc_core.common.config.RabbitMqConfig;
 import com.zkrypto.zk_mpc_core.infrastucture.amqp.dto.InitProtocolEndMessage;
