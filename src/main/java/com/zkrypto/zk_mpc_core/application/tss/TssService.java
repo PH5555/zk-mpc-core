@@ -36,6 +36,8 @@ public class TssService {
      * @param sid 그룹 id
      */
     public void collectMessageAndCheckCompletion(ParticipantType type, String message, String sid) {
+        log.info("라운드 메시지 수신");
+
         // ContinueMessage 파싱
         ContinueMessage continueMessage = (ContinueMessage)JsonUtil.parse(message, ContinueMessage.class);
 
@@ -48,30 +50,44 @@ public class TssService {
         // 현재 그룹의 프로토콜 정보 조회
         ProtocolData protocolData = protocolSessionService.getSession(sid);
 
+        // 라운드 종료 클라이언트 수 조회
+        int currentCount = messageSessionService.getSessionCount(sid, roundName);
+
+        log.info("임계치: {}, 현재 수: {}", protocolData.getThreshold(), currentCount);
+
         // 임계치보다 현재 라운드의 메시지가 많아지면 메시지 전송
-        if(messageSessionService.getSessionCount(sid, roundName) >= protocolData.getThreshold()) {
+        if(currentCount >= protocolData.getThreshold()) {
+            log.info("다음 라운드 진행 메시지 전송");
             List<ContinueMessage> currentRoundMessages = messageSessionService.getSessionMessage(sid, roundName);
             sendAllMessages(currentRoundMessages, type, sid, protocolData);
         }
     }
 
     /**
-     * 프로토콜 참여자들의 상태를 확인하는 메서드 입니다.
-     * 참여자가 모두 팩토리를 생성하면 프로토콜을 시작합니다.
+     * 프로토콜 참여자들의 초기화 상태를 확인하는 메서드 입니다.
+     * 참여자가 모두 초기화를 완료하면 프로토콜을 시작합니다.
      * @param sid 그룹 id
      * @param memberId 멤버 id
      * @param type 프로토콜 타입
      */
     public void checkInitProtocolStatus(String sid, String memberId, ParticipantType type) {
         // 팩토리 세션에 추가
+        log.info("프로토콜 초기화 종료 메시지 받음: {}", memberId);
         factorySessionService.addSession(sid, memberId);
 
         // 현재 그룹의 프로토콜 정보 조회
         int threshold = protocolSessionService.getSession(sid).getThreshold();
 
-        // 임계치보다 팩토리 생성자가 많아지면 프로토콜 시작 메시지 전송
-        if(factorySessionService.getSessionCount(sid) >= threshold) {
+        // 초기화 완료한 클라이언트 수
+        int currentCount = factorySessionService.getSessionCount(sid);
+
+        log.info("임계치: {}, 초기화 완료 수: {}", threshold, currentCount);
+
+        // 임계치보다 초기화 완료 클라이언트 수가 많아지면 프로토콜 시작 메시지 전송
+        if(currentCount >= threshold) {
+            log.info("{} 프로토콜 시작", type.getTypeName());
             factorySessionService.getAllSession(sid).forEach(recipient -> {
+                log.info("프로토콜 시작 메시지 전송: {}", recipient);
                 InitProtocolEndEvent event = InitProtocolEndEvent.builder()
                         .sid(sid)
                         .type(type)
@@ -134,38 +150,36 @@ public class TssService {
      * @param type
      */
     public void checkProtocolCompleteStatus(String sid, String memberId, ParticipantType type) {
+        log.info("프로토콜 종료 메시지 수신");
+
         // 종료 상태 세션에 추가
         completeStatusSessionService.addSession(sid, memberId);
 
         // 현재 그룹의 프로토콜 정보 조회
         ProtocolData protocolData = protocolSessionService.getSession(sid);
 
-        // 임계치보다 종료 상태 세션수가 많아지면 다음 프로토콜 시작 메시지 전송
-        if(factorySessionService.getSessionCount(sid) >= protocolData.getThreshold()) {
-            processNextProtocol(type, sid, protocolData);
-        }
-    }
+        // 프로토콜 종료 클라이언트 수 조회
+        int currentCount = factorySessionService.getSessionCount(sid);
 
-    /**
-     * 현재 프로토콜의 다음 차례 프로토콜을 시작하는 메서드입니다.
-     * @param currentType 현재 프로토콜 타입
-     * @param sid 그룹 id
-     */
-    private void processNextProtocol(ParticipantType currentType, String sid, ProtocolData protocolData) {
-        // 다음 프로토콜이 존재하는 경우 시작
-        currentType.getNextStep().ifPresent(type -> sendStartMessage(
-                protocolData.getMemberIds(),
-                type,
-                sid,
-                protocolData.getThreshold(),
-                protocolData.getMessageBytes()));
+        log.info("임계치: {}, 프로토콜 종료 수: {}", protocolData.getThreshold(), currentCount);
+
+        // 임계치보다 종료 상태 세션수가 많아지고 다음 프로토콜이 존재하면 시작 메시지 전송
+        // 다음 프로토콜 존재하지 않으면 완전 종료
+        // TODO: 프로토콜에 따라서 다음 과정 진행
+        if(currentCount >= protocolData.getThreshold()) {
+            type.getNextStep().ifPresentOrElse(
+                    nextType -> sendInitMessage(protocolData.getMemberIds(), type, sid, protocolData.getThreshold(), protocolData.getMessageBytes()),
+                    () -> {
+                        log.info("완전 종료");
+                    });
+        }
     }
 
     /**
      * 프로세스 그룹에 따라서 프로토콜을 시작하는 메서드입니다.
      * @param command
      */
-    public void initProtocol(InitProtocolCommand command) {
+    public void startProtocol(InitProtocolCommand command) {
         // 실행해야하는 첫번째 프로토콜 조회
         ParticipantType participantType = ParticipantType.getFirstStep(command.process());
 
@@ -174,18 +188,18 @@ public class TssService {
         protocolSessionService.addSession(command.sid(), protocolData);
 
         // 실행 메시지 전송
-        sendStartMessage(command.memberIds(), participantType, command.sid(), command.threshold(), command.messageBytes());
+        sendInitMessage(command.memberIds(), participantType, command.sid(), command.threshold(), command.messageBytes());
     }
 
     /**
-     * 프로토콜 시작 메시지를 전송하는 메서드입니다.
+     * 프로토콜 초기화 메시지를 전송하는 메서드입니다.
      * @param memberIds 프로토콜 참여자 id
      * @param type 프로토콜 타입
      * @param sid 그룹 id
      * @param threshold 임계치
      * @param messageBytes 메시지
      */
-    private void sendStartMessage(List<String> memberIds, ParticipantType type, String sid, Integer threshold, byte[] messageBytes) {
+    private void sendInitMessage(List<String> memberIds, ParticipantType type, String sid, Integer threshold, byte[] messageBytes) {
         memberIds.forEach(recipient -> {
             // 해당 메시지를 받는 사람을 제외한 otherIds 생성
             String[] otherIds = (String[])memberIds.stream().filter(id -> !id.equals(recipient)).toList().toArray();
@@ -199,6 +213,7 @@ public class TssService {
                     .messageBytes(messageBytes)
                     .recipient(recipient)
                     .build();
+            log.info("{} 프로토콜 초기화 메시지 전송 : {}", type, recipient);
             tssMessageBroker.publish(event);
         });
     }

@@ -1,5 +1,6 @@
 package com.zkrypto.zk_mpc_core.application.tss.dto;
 
+import com.zkrypto.zk_mpc_core.application.tss.constant.ProcessGroup;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;

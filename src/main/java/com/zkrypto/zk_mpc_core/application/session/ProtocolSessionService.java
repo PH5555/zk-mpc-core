@@ -14,12 +14,10 @@ public class ProtocolSessionService {
 
     public void addSession(String groupId, ProtocolData protocolData) {
         session.compute(groupId, (k, v) -> protocolData);
-        log.info("{} 프로토콜 세션 추가", groupId);
     }
 
     public void clearSession(String groupId) {
         session.put(groupId, null);
-        log.info("{} 프로토콜 세션 삭제", groupId);
     }
 
     public ProtocolData getSession(String groupId) {
