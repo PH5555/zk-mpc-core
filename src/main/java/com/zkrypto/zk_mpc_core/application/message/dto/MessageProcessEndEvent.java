@@ -7,7 +7,7 @@ import lombok.Builder;
 public record MessageProcessEndEvent(
         String recipient,
         String message,
-        ParticipantType type,
+        String type,
         String sid
 ) {
 }

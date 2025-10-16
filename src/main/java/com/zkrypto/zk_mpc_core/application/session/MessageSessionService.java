@@ -14,9 +14,15 @@ import java.util.concurrent.ConcurrentHashMap;
 public class MessageSessionService {
     Map<String, List<ContinueMessage>> session = new ConcurrentHashMap<>();
 
-    public void addSession(String groupId, String roundName, ContinueMessage message) {
+    public void addSession(String groupId, String roundName, List<ContinueMessage> messages) {
         String sessionId = groupId.concat(roundName);
-        session.compute(sessionId, (k, v) -> (v == null) ? new ArrayList<>() : v).add(message);
+        session.compute(groupId, (k, v) -> {
+            if (v == null) {
+                v = new ArrayList<>();
+            }
+            v.addAll(messages);
+            return v;
+        });
         log.info("{} 메시지 세션 추가", sessionId);
     }
 

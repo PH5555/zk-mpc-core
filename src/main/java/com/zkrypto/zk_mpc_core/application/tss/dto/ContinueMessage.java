@@ -16,4 +16,8 @@ public class ContinueMessage {
     private BigInteger to;
     private Boolean is_broadcast;
     private List<Integer> unverified_bytes;
+
+    public String getType() {
+        return this.message_type.keySet().stream().findFirst().orElse("");
+    }
 }

@@ -10,6 +10,7 @@ import com.zkrypto.zk_mpc_core.application.session.ProtocolSessionService;
 import com.zkrypto.zk_mpc_core.application.tss.constant.ParticipantType;
 import com.zkrypto.zk_mpc_core.application.tss.dto.ContinueMessage;
 import com.zkrypto.zk_mpc_core.application.message.dto.InitProtocolEndEvent;
+import com.zkrypto.zk_mpc_core.application.tss.dto.DelegateOutput;
 import com.zkrypto.zk_mpc_core.application.tss.dto.ProtocolData;
 import com.zkrypto.zk_mpc_core.common.util.JsonUtil;
 import com.zkrypto.zk_mpc_core.infrastucture.web.dto.InitProtocolCommand;
@@ -18,6 +19,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -35,17 +37,18 @@ public class TssService {
      * @param message 메시지 내용
      * @param sid 그룹 id
      */
-    public void collectMessageAndCheckCompletion(ParticipantType type, String message, String sid) {
+    public void collectMessageAndCheckCompletion(String type, String message, String sid) {
         log.info("라운드 메시지 수신");
+        log.info("message: {}", message.substring(0, 30));
+        // DelegateOutput 파싱
+        DelegateOutput output = (DelegateOutput)JsonUtil.parse(message, DelegateOutput.class);
+        List<ContinueMessage> continueMessages = output.getContinueMessages();
 
-        // ContinueMessage 파싱
-        ContinueMessage continueMessage = (ContinueMessage)JsonUtil.parse(message, ContinueMessage.class);
-
-        // ContinueMessage 에서 라운드 정보 추출
-        String roundName = continueMessage.getMessage_type().keySet().stream().findFirst().get();
+        // 메시지의 라운드 추출
+        String roundName = continueMessages.stream().findFirst().map(ContinueMessage::getType).orElseThrow(RuntimeException::new);
 
         // 세션에 현재 메시지 추가
-        messageSessionService.addSession(sid, roundName, continueMessage);
+        messageSessionService.addSession(sid, roundName, continueMessages);
 
         // 현재 그룹의 프로토콜 정보 조회
         ProtocolData protocolData = protocolSessionService.getSession(sid);
@@ -106,7 +109,7 @@ public class TssService {
      * @param type 프로토콜 타입
      * @param sid 그룹 id
      */
-    private void sendAllMessages(List<ContinueMessage> continueMessages, ParticipantType type, String sid, ProtocolData protocolData) {
+    private void sendAllMessages(List<ContinueMessage> continueMessages, String type, String sid, ProtocolData protocolData) {
         // broadcast 먼저 처리하도록 정렬
         log.info("broadcast 정렬");
         continueMessages.sort(Comparator.comparing(ContinueMessage::getIs_broadcast).reversed());
@@ -123,7 +126,7 @@ public class TssService {
      * @param type 프로토콜 타입
      * @param sid 그룹 id
      */
-    private void processAndSendMessage(ContinueMessage message, ParticipantType type, String sid, ProtocolData protocolData) {
+    private void processAndSendMessage(ContinueMessage message, String type, String sid, ProtocolData protocolData) {
         // 메시지 수신자 결정
         List<String> recipients = message.getIs_broadcast()
                 ? protocolData.getMemberIds().stream().filter(mid -> !mid.equals(message.getFrom().toString())).toList() // Is_broadcast이면 보내는 사람을 제외한 모든 참여자
