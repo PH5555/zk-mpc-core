@@ -10,3 +10,5 @@ spring:
     listener:
       simple:
         default-requeue-rejected: false
+server:
+  port: 8083

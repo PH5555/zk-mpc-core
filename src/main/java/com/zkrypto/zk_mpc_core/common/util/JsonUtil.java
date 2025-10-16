@@ -37,7 +37,7 @@ public class JsonUtil {
             return objectMapper.writeValueAsString(object);
         } catch (JsonProcessingException e) {
             log.error(e.getMessage());
-            throw new TssException(ErrorCode.JSON_PARSE_ERROR);
+            throw new RuntimeException(e.getMessage());
         }
     }
 }
