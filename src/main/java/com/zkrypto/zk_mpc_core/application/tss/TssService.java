@@ -3,8 +3,7 @@ package com.zkrypto.zk_mpc_core.application.tss;
 import com.zkrypto.zk_mpc_core.application.message.MessageBroker;
 import com.zkrypto.zk_mpc_core.application.message.dto.InitProtocolEvent;
 import com.zkrypto.zk_mpc_core.application.message.dto.MessageProcessEndEvent;
-import com.zkrypto.zk_mpc_core.application.session.CompleteStatusSessionService;
-import com.zkrypto.zk_mpc_core.application.session.FactorySessionService;
+import com.zkrypto.zk_mpc_core.application.session.thresholdSessionService;
 import com.zkrypto.zk_mpc_core.application.session.MessageSessionService;
 import com.zkrypto.zk_mpc_core.application.session.ProtocolSessionService;
 import com.zkrypto.zk_mpc_core.application.tss.constant.ParticipantType;
@@ -19,7 +18,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Map;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -27,8 +25,7 @@ import java.util.Map;
 public class TssService {
     private final MessageBroker tssMessageBroker;
     private final MessageSessionService messageSessionService;
-    private final FactorySessionService factorySessionService;
-    private final CompleteStatusSessionService completeStatusSessionService;
+    private final thresholdSessionService thresholdSessionService;
     private final ProtocolSessionService protocolSessionService;
 
     /**
@@ -39,7 +36,6 @@ public class TssService {
      */
     public void collectMessageAndCheckCompletion(String type, String message, String sid) {
         log.info("라운드 메시지 수신");
-        log.info("message: {}", message.substring(0, 30));
         // DelegateOutput 파싱
         DelegateOutput output = (DelegateOutput)JsonUtil.parse(message, DelegateOutput.class);
         List<ContinueMessage> continueMessages = output.getContinueMessages();
@@ -50,11 +46,14 @@ public class TssService {
         // 세션에 현재 메시지 추가
         messageSessionService.addSession(sid, roundName, continueMessages);
 
+        // 임계치 세션 추가
+        thresholdSessionService.addSession(sid);
+
         // 현재 그룹의 프로토콜 정보 조회
         ProtocolData protocolData = protocolSessionService.getSession(sid);
 
         // 라운드 종료 클라이언트 수 조회
-        int currentCount = messageSessionService.getSessionCount(sid, roundName);
+        int currentCount = thresholdSessionService.getSessionCount(sid);
 
         log.info("임계치: {}, 현재 수: {}", protocolData.getThreshold(), currentCount);
 
@@ -62,6 +61,8 @@ public class TssService {
         if(currentCount >= protocolData.getThreshold()) {
             log.info("다음 라운드 진행 메시지 전송");
             List<ContinueMessage> currentRoundMessages = messageSessionService.getSessionMessage(sid, roundName);
+            thresholdSessionService.clearSession(sid);
+            messageSessionService.clearSession(sid, roundName);
             sendAllMessages(currentRoundMessages, type, sid, protocolData);
         }
     }
@@ -76,20 +77,21 @@ public class TssService {
     public void checkInitProtocolStatus(String sid, String memberId, ParticipantType type) {
         // 팩토리 세션에 추가
         log.info("프로토콜 초기화 종료 메시지 받음: {}", memberId);
-        factorySessionService.addSession(sid, memberId);
+        thresholdSessionService.addSession(sid);
 
         // 현재 그룹의 프로토콜 정보 조회
-        int threshold = protocolSessionService.getSession(sid).getThreshold();
+        ProtocolData protocolData = protocolSessionService.getSession(sid);
+        int threshold = protocolData.getThreshold();
 
         // 초기화 완료한 클라이언트 수
-        int currentCount = factorySessionService.getSessionCount(sid);
+        int currentCount = thresholdSessionService.getSessionCount(sid);
 
         log.info("임계치: {}, 초기화 완료 수: {}", threshold, currentCount);
 
         // 임계치보다 초기화 완료 클라이언트 수가 많아지면 프로토콜 시작 메시지 전송
         if(currentCount >= threshold) {
-            log.info("{} 프로토콜 시작", type.getTypeName());
-            factorySessionService.getAllSession(sid).forEach(recipient -> {
+            thresholdSessionService.clearSession(sid);
+            protocolData.getMemberIds().forEach(recipient -> {
                 log.info("프로토콜 시작 메시지 전송: {}", recipient);
                 InitProtocolEndEvent event = InitProtocolEndEvent.builder()
                         .sid(sid)
@@ -156,13 +158,13 @@ public class TssService {
         log.info("프로토콜 종료 메시지 수신");
 
         // 종료 상태 세션에 추가
-        completeStatusSessionService.addSession(sid, memberId);
+        thresholdSessionService.addSession(sid);
 
         // 현재 그룹의 프로토콜 정보 조회
         ProtocolData protocolData = protocolSessionService.getSession(sid);
 
         // 프로토콜 종료 클라이언트 수 조회
-        int currentCount = factorySessionService.getSessionCount(sid);
+        int currentCount = thresholdSessionService.getSessionCount(sid);
 
         log.info("임계치: {}, 프로토콜 종료 수: {}", protocolData.getThreshold(), currentCount);
 
@@ -170,8 +172,12 @@ public class TssService {
         // 다음 프로토콜 존재하지 않으면 완전 종료
         // TODO: 프로토콜에 따라서 다음 과정 진행
         if(currentCount >= protocolData.getThreshold()) {
+            thresholdSessionService.clearSession(sid);
             type.getNextStep().ifPresentOrElse(
-                    nextType -> sendInitMessage(protocolData.getMemberIds(), type, sid, protocolData.getThreshold(), protocolData.getMessageBytes()),
+                    nextType -> {
+                        log.info("{} 종료, {} 실행", type, nextType);
+                        sendInitMessage(protocolData.getMemberIds(), nextType, sid, protocolData.getThreshold(), protocolData.getMessageBytes());
+                    },
                     () -> {
                         log.info("완전 종료");
                     });

@@ -16,7 +16,7 @@ public class MessageSessionService {
 
     public void addSession(String groupId, String roundName, List<ContinueMessage> messages) {
         String sessionId = groupId.concat(roundName);
-        session.compute(groupId, (k, v) -> {
+        session.compute(sessionId, (k, v) -> {
             if (v == null) {
                 v = new ArrayList<>();
             }
@@ -28,7 +28,7 @@ public class MessageSessionService {
 
     public void clearSession(String groupId, String roundName) {
         String sessionId = groupId.concat(roundName);
-        session.put(sessionId, null);
+        session.remove(sessionId);
         log.info("{} 메시지 세션 삭제", sessionId);
     }
 
