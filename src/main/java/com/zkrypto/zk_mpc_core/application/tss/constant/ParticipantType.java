@@ -51,5 +51,12 @@ public enum ParticipantType {
                 .findFirst()
                 .orElseThrow(() -> new RuntimeException("group에 해당하는 participantType이 없습니다."));
     }
+
+    public static ParticipantType of(String typeName) {
+        return Arrays.stream(ParticipantType.values())
+                .filter(type -> type.getTypeName().equals(typeName))
+                .findFirst()
+                .orElseThrow(() -> new RuntimeException("participantType이 잘못됐습니다. :" + typeName));
+    }
 }
 

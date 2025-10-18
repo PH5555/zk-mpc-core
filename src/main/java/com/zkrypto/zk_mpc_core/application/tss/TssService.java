@@ -43,11 +43,14 @@ public class TssService {
 
         // 각 메시지마다 발송 준비 여부 확인 후 발송
         continueMessages.forEach(continueMessage -> {
-            if(isMessageReadyToSend(continueMessage)) {
+            if(isMessageReadyToSend(type, continueMessage)) {
                 sendMessage(continueMessage, type, sid, protocolSessionService.getSession(sid));
             }
+            //TODO: 세션에 저장
         });
     }
+
+    //TODO: continue 빈배열 받은 후 모두 완료되면 다음 메시지 실행
 
     /**
      * 프로토콜 참여자들의 초기화 상태를 확인하는 메서드 입니다.
@@ -83,15 +86,25 @@ public class TssService {
         }
     }
 
-    private boolean isMessageReadyToSend(ContinueMessage message) {
+    /**
+     * 메시지 전송 여부 확인 메서드입니다.
+     * TShare의 R2Decommit는 R2_PRIVATE_SHARE를 모두 받은 후 실행해야합니다.
+     * TPresign의 ROUND_ONE, ROUND_TWO는 ROUND_ONE_BROADCAST, ROUND_TWO_BROADCAST를 모두 받은 후 실행해야합니다.
+     * R2Decommit, ROUND_ONE, ROUND_TWO는 메시지를 클라이언트에게 보내지 않고 세션에 저장해둔 후, 선행조건이 완료되면 전송합니다.
+     * @param type 메시지 타입
+     * @param message 메시지
+     * @return
+     */
+    private boolean isMessageReadyToSend(String type, ContinueMessage message) {
         //메시지에서 라운드 추출
         Round round = message.getMessage_type().values().stream().findFirst().map(Round::fromName)
-                .orElseThrow(() -> new RuntimeException("타입을 찾을 수 없습니다."));
+                .orElseThrow(() -> new RuntimeException("라운드를 찾을 수 없습니다."));
 
-        // 선행조건이 있으면 보낼 준비 안 됨
-        Boolean condition = round.hasPendingPrerequisites();
-        log.info("{} message condition: {}", round, !condition);
-        return !round.hasPendingPrerequisites();
+        // 선행조건 확인
+        boolean PendingPrerequisites = round.hasPendingPrerequisites();
+
+        // 선행조건이 있고, TShare, TPresign 프로토콜일 때는 메시지 대기
+        return !(PendingPrerequisites && (ParticipantType.of(type).equals(ParticipantType.TSHARE) || ParticipantType.of(type).equals(ParticipantType.TPRESIGN)));
     }
 
     /**
