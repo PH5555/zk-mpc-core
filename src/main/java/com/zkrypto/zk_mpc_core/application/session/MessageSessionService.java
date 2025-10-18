@@ -14,13 +14,13 @@ import java.util.concurrent.ConcurrentHashMap;
 public class MessageSessionService {
     Map<String, List<ContinueMessage>> session = new ConcurrentHashMap<>();
 
-    public void addSession(String groupId, String roundName, List<ContinueMessage> messages) {
+    public void addSession(String groupId, String roundName, ContinueMessage message) {
         String sessionId = groupId.concat(roundName);
         session.compute(sessionId, (k, v) -> {
             if (v == null) {
                 v = new ArrayList<>();
             }
-            v.addAll(messages);
+            v.add(message);
             return v;
         });
         log.info("{} 메시지 세션 추가", sessionId);

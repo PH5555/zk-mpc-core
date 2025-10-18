@@ -33,7 +33,6 @@ public class DelegateOutputDeserializer extends JsonDeserializer<DelegateOutput>
 
         // 최상위 키(key) 이름을 가져옵니다. ("Continue" 또는 "Done")
         String typeKey = rootNode.fieldNames().next();
-        log.info("typekey: {}", typeKey);
         if ("Continue".equals(typeKey)) {
             JsonNode continueNode = rootNode.get("Continue");
             // "Continue" 키의 값(JSON 배열)을 List<ContinueMessage>로 파싱합니다.
