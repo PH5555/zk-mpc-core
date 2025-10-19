@@ -2,6 +2,8 @@ package com.zkrypto.zk_mpc_core.application.tss.constant;
 
 import lombok.AllArgsConstructor;
 
+import java.util.Optional;
+
 @AllArgsConstructor
 public enum Round {
     // TShare rounds
@@ -26,25 +28,25 @@ public enum Round {
      * 마지막 라운드일 경우 null을 반환합니다.
      * @return 다음 Round 객체 또는 null
      */
-    public Round getNextRound() {
+    public Optional<Round> getNextRound() {
         switch (this) {
             case R2_PRIVATE_SHARE:
-                return R2_DECOMMIT;
+                return Optional.of(R2_DECOMMIT);
 
             case ROUND_ONE_BROADCAST:
-                return ROUND_ONE;
+                return Optional.of(ROUND_ONE);
 
             case ROUND_TWO_BROADCAST:
-                return ROUND_TWO;
+                return Optional.of(ROUND_TWO);
 
             // 마지막 라운드인 경우
             case R2_DECOMMIT:
             case ROUND_ONE:
             case ROUND_TWO:
-                return null;
+                return Optional.empty();
 
             default:
-                return null;
+                return Optional.empty();
         }
     }
 

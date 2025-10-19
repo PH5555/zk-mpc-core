@@ -64,6 +64,11 @@ public class TssService {
      * @param sid 그룹 id
      */
     public void checkRoundStatus(String type, String roundName, String sid) {
+        // 순서 상관없는 라운드이면 스킵
+        if(Round.fromName(roundName).getNextRound().isEmpty()) {
+            return;
+        }
+
         // 세션에 추가
         String sessionKey = sid.concat(type.concat(roundName)); // sid, type, roundName 을 조합해서 key 생성
         thresholdSessionService.addSession(sessionKey);
@@ -75,7 +80,8 @@ public class TssService {
         // 라운드 종료 수가 임계치를 넘으면 다음 라운드 진행
         if(sessionCount >= threshold) {
             log.info("round name : {}", roundName);
-            Round nextRound = Round.fromName(roundName).getNextRound();
+            Round nextRound = Round.fromName(roundName).getNextRound()
+                    .orElseThrow(() -> new RuntimeException("다음 라운드가 존재하지 않습니다."));
             String key = sid.concat(type.concat(nextRound.name()));
             List<ContinueMessage> nextMessage = messageSessionService.getSessionMessage(key);
             messageSessionService.clearSession(key);
@@ -201,7 +207,6 @@ public class TssService {
 
         // 임계치보다 종료 상태 세션수가 많아지고 다음 프로토콜이 존재하면 시작 메시지 전송
         // 다음 프로토콜 존재하지 않으면 완전 종료
-        // TODO: 프로토콜에 따라서 다음 과정 진행
         if(currentCount >= protocolData.getThreshold()) {
             thresholdSessionService.clearSession(sid);
             type.getNextStep().ifPresentOrElse(
@@ -210,6 +215,7 @@ public class TssService {
                         sendInitMessage(protocolData.getMemberIds(), nextType, sid, protocolData.getThreshold(), protocolData.getMessageBytes());
                     },
                     () -> {
+                        // TODO: 프로토콜에 따라서 다음 과정 진행 (tshare: 퍼블릭키 저장, tsign: 블록체인 업로드)
                         protocolSessionService.clearSession(sid);
                         log.info("모든 참여자 종료");
                     });
@@ -225,11 +231,11 @@ public class TssService {
         ParticipantType participantType = ParticipantType.getFirstStep(command.process());
 
         // 프로토콜 데이터 저장
-        ProtocolData protocolData = new ProtocolData(command.memberIds(), command.threshold(), command.messageBytes());
+        ProtocolData protocolData = new ProtocolData(command.memberIds(), command.n(), command.messageBytes());
         protocolSessionService.addSession(command.sid(), protocolData);
 
         // 실행 메시지 전송
-        sendInitMessage(command.memberIds(), participantType, command.sid(), command.threshold(), command.messageBytes());
+        sendInitMessage(command.memberIds(), participantType, command.sid(), command.n(), command.messageBytes());
     }
 
     /**
