@@ -1,7 +1,6 @@
 package com.zkrypto.zk_mpc_core.application.tss.constant;
 
 import lombok.AllArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 
 @AllArgsConstructor
 public enum Round {

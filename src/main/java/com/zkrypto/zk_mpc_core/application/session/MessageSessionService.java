@@ -14,33 +14,25 @@ import java.util.concurrent.ConcurrentHashMap;
 public class MessageSessionService {
     Map<String, List<ContinueMessage>> session = new ConcurrentHashMap<>();
 
-    public void addSession(String groupId, String roundName, ContinueMessage message) {
-        String sessionId = groupId.concat(roundName);
-        session.compute(sessionId, (k, v) -> {
+    public void addSession(String key, ContinueMessage message) {
+        session.compute(key, (k, v) -> {
             if (v == null) {
                 v = new ArrayList<>();
             }
             v.add(message);
             return v;
         });
-        log.info("{} 메시지 세션 추가", sessionId);
     }
 
-    public void clearSession(String groupId, String roundName) {
-        String sessionId = groupId.concat(roundName);
-        session.remove(sessionId);
-        log.info("{} 메시지 세션 삭제", sessionId);
+    public void clearSession(String key) {
+        session.remove(key);
     }
 
-    public List<ContinueMessage> getSessionMessage(String groupId, String roundName) {
-        String sessionId = groupId.concat(roundName);
-        return session.getOrDefault(sessionId, new ArrayList<>());
+    public List<ContinueMessage> getSessionMessage(String key) {
+        return session.getOrDefault(key, new ArrayList<>());
     }
 
-    public int getSessionCount(String groupId, String roundName) {
-        String sessionId = groupId.concat(roundName);
-        int count = session.getOrDefault(sessionId, new ArrayList<>()).size();
-        log.info("{} 메시지 세션 갯수: {}", sessionId, count);
-        return count;
+    public int getSessionCount(String key) {
+        return session.getOrDefault(key, new ArrayList<>()).size();
     }
 }

@@ -17,7 +17,7 @@ public class ProtocolSessionService {
     }
 
     public void clearSession(String groupId) {
-        session.put(groupId, null);
+        session.remove(groupId);
     }
 
     public ProtocolData getSession(String groupId) {

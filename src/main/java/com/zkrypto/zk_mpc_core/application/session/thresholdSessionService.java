@@ -11,16 +11,15 @@ import java.util.concurrent.ConcurrentHashMap;
 public class thresholdSessionService {
     Map<String, Integer> session = new ConcurrentHashMap<>();
 
-    public void addSession(String groupId) {
-        session.compute(groupId, (k, v) -> (v == null) ? 1 : v + 1);
+    public void addSession(String key) {
+        session.compute(key, (k, v) -> (v == null) ? 1 : v + 1);
     }
 
-    public void clearSession(String groupId) {
-        session.remove(groupId);
+    public void clearSession(String key) {
+        session.remove(key);
     }
 
-    public int getSessionCount(String groupId) {
-        int count = session.getOrDefault(groupId, 0);
-        return count;
+    public int getSessionCount(String key) {
+        return session.getOrDefault(key, 0);
     }
 }
