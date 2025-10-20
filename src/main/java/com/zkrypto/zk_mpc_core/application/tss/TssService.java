@@ -74,11 +74,11 @@ public class TssService {
         thresholdSessionService.addSession(sessionKey);
 
         // 세션, 임계치 조회
-        Integer threshold = protocolSessionService.getSession(sid).getThreshold();
+        int totalParticipants = protocolSessionService.getSession(sid).getMemberIds().size();
         int sessionCount = thresholdSessionService.getSessionCount(sessionKey);
 
         // 라운드 종료 수가 임계치를 넘으면 다음 라운드 진행
-        if(sessionCount >= threshold) {
+        if(sessionCount >= totalParticipants) {
             log.info("round name : {}", roundName);
             Round nextRound = Round.fromName(roundName).getNextRound()
                     .orElseThrow(() -> new RuntimeException("다음 라운드가 존재하지 않습니다."));
@@ -103,13 +103,13 @@ public class TssService {
 
         // 현재 그룹의 프로토콜 정보 조회
         ProtocolData protocolData = protocolSessionService.getSession(sid);
-        int threshold = protocolData.getThreshold();
+        int totalParticipants = protocolSessionService.getSession(sid).getMemberIds().size();
 
         // 초기화 완료한 클라이언트 수
         int currentCount = thresholdSessionService.getSessionCount(sid);
 
         // 임계치보다 초기화 완료 클라이언트 수가 많아지면 프로토콜 시작 메시지 전송
-        if(currentCount >= threshold) {
+        if(currentCount >= totalParticipants) {
             thresholdSessionService.clearSession(sid);
             protocolData.getMemberIds().forEach(recipient -> {
                 log.info("{} 프로토콜 시작 메시지 전송: {}", type, recipient);
@@ -201,13 +201,14 @@ public class TssService {
 
         // 현재 그룹의 프로토콜 정보 조회
         ProtocolData protocolData = protocolSessionService.getSession(sid);
+        int totalParticipants = protocolSessionService.getSession(sid).getMemberIds().size();
 
         // 프로토콜 종료 클라이언트 수 조회
         int currentCount = thresholdSessionService.getSessionCount(sid);
 
         // 임계치보다 종료 상태 세션수가 많아지고 다음 프로토콜이 존재하면 시작 메시지 전송
         // 다음 프로토콜 존재하지 않으면 완전 종료
-        if(currentCount >= protocolData.getThreshold()) {
+        if(currentCount >= totalParticipants) {
             thresholdSessionService.clearSession(sid);
             type.getNextStep().ifPresentOrElse(
                     nextType -> {
@@ -231,11 +232,11 @@ public class TssService {
         ParticipantType participantType = ParticipantType.getFirstStep(command.process());
 
         // 프로토콜 데이터 저장
-        ProtocolData protocolData = new ProtocolData(command.memberIds(), command.n(), command.messageBytes());
+        ProtocolData protocolData = new ProtocolData(command.memberIds(), command.threshold(), command.messageBytes());
         protocolSessionService.addSession(command.sid(), protocolData);
 
         // 실행 메시지 전송
-        sendInitMessage(command.memberIds(), participantType, command.sid(), command.n(), command.messageBytes());
+        sendInitMessage(command.memberIds(), participantType, command.sid(), command.threshold(), command.messageBytes());
     }
 
     /**
@@ -250,6 +251,7 @@ public class TssService {
         memberIds.forEach(recipient -> {
             // 해당 메시지를 받는 사람을 제외한 otherIds 생성
             String[] otherIds = memberIds.stream().filter(id -> !id.equals(recipient)).toList().toArray(String[]::new);
+            String[] participantIds = memberIds.toArray(String[]::new);
 
             // 메시지 전송
             InitProtocolEvent event = InitProtocolEvent.builder()
@@ -258,6 +260,7 @@ public class TssService {
                     .otherIds(otherIds)
                     .threshold(threshold)
                     .messageBytes(messageBytes)
+                    .participantIds(participantIds)
                     .recipient(recipient)
                     .build();
             log.info("{}에게 {} 프로토콜 초기화 메시지 전송", recipient, type);

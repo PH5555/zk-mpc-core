@@ -8,6 +8,7 @@ public record InitProtocolMessage(
         ParticipantType participantType,
         String sid,
         String[] otherIds,
+        String[] participantIds,
         Integer threshold,
         byte[] messageBytes
 ) {

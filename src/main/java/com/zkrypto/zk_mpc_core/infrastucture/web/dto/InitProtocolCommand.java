@@ -10,7 +10,7 @@ public record InitProtocolCommand(
         @NotNull ProcessGroup process,
         @NotNull String sid,
         @NotNull List<String> memberIds,
-        @NotNull Integer n,
+        @NotNull Integer threshold,
         byte[] messageBytes
 ) {
 }
