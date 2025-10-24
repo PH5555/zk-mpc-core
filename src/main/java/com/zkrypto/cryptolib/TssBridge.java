@@ -90,7 +90,25 @@ public class TssBridge {
      * 여러 참여자로부터 받은 서명 조각(share)들을 모아 최종 ECDSA 서명을 완성합니다.
      *
      * @param messages 각 참여자가 생성한 Sign 프로토콜의 결과 메시지 배열
-     * @return 최종 서명 (JSON 문자열)
+     * @param messageBytes 서명하고자 하는 메시지
+     * @param publicKey 퍼블릭키
+     * @param chainId 체인 id
+     * @return 서명
      */
-    public static native String computeOutput(String[] messages);
+    public static native String computeOutput(
+            String[] messages,
+            byte[] messageBytes,
+            String publicKey,
+            String chainId
+    );
+
+    /**
+     * tshareOutput에서 publicKey를 추출합니다.
+     *
+     * @param tshareOutput tshare 결과
+     * @return publickey
+     */
+    public static native String getMasterKey(
+            String tshareOutput
+    );
 }
