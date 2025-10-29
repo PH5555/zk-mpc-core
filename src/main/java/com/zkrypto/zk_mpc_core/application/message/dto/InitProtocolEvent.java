@@ -11,6 +11,7 @@ public record InitProtocolEvent(
         String[] otherIds,
         String[] participantIds,
         Integer threshold,
-        byte[] messageBytes
+        byte[] messageBytes,
+        String target
 ) {
 }

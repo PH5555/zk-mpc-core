@@ -31,6 +31,7 @@ public class MessageMapper {
                 .participantIds(event.participantIds())
                 .threshold(event.threshold())
                 .messageBytes(event.messageBytes())
+                .target(event.target())
                 .build();
     }
 }

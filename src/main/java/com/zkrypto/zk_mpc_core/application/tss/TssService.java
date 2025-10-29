@@ -213,7 +213,9 @@ public class TssService {
             type.getNextStep().ifPresentOrElse(
                     nextType -> {
                         log.info("{} 종료, {} 실행", type, nextType);
-                        sendInitMessage(protocolData.getMemberIds(), nextType, sid, protocolData.getThreshold(), protocolData.getMessageBytes(), protocolData.getTarget());
+                        protocolData.getMemberIds().forEach(recipient -> {
+                            sendInitMessage(protocolData.getMemberIds(), recipient, nextType, sid, protocolData.getThreshold(), protocolData.getMessageBytes(), protocolData.getTarget());
+                        });
                     },
                     () -> {
                         // TODO: 프로토콜에 따라서 다음 과정 진행 (tshare: 퍼블릭키 저장, tsign: 블록체인 업로드)
@@ -228,15 +230,17 @@ public class TssService {
      * @param command command
      */
     public void startProtocol(InitProtocolCommand command) {
-        // 실행해야하는 첫번째 프로토콜 조회
-        ParticipantType participantType = ParticipantType.getFirstStep(command.process());
-
         // 프로토콜 데이터 저장
         ProtocolData protocolData = new ProtocolData(command.memberIds(), command.threshold(), command.messageBytes(), command.target());
         protocolSessionService.addSession(command.sid(), protocolData);
 
-        // 실행 메시지 전송
-        sendInitMessage(command.memberIds(), participantType, command.sid(), command.threshold(), command.messageBytes(), command.target());
+        command.memberIds().forEach(recipient -> {
+            // 실행해야하는 첫번째 프로토콜 조회
+            ParticipantType participantType = ParticipantType.getFirstStep(command.process(), command.target(), recipient);
+
+            // 실행 메시지 전송
+            sendInitMessage(command.memberIds(), recipient, participantType, command.sid(), command.threshold(), command.messageBytes(), command.target());
+        });
     }
 
     /**
@@ -247,49 +251,24 @@ public class TssService {
      * @param threshold 임계치
      * @param messageBytes 메시지
      */
-    private void sendInitMessage(List<String> memberIds, ParticipantType type, String sid, Integer threshold, byte[] messageBytes, String target) {
-        memberIds.forEach(recipient -> {
-            // 해당 메시지를 받는 사람을 제외한 otherIds 생성
-            String[] otherIds = generateOtherIds(type, recipient, target, memberIds);
-            String[] participantIds = memberIds.toArray(String[]::new);
+    private void sendInitMessage(List<String> memberIds, String recipient, ParticipantType type, String sid, Integer threshold, byte[] messageBytes, String target) {
+        // 해당 메시지를 받는 사람을 제외한 otherIds 생성
+        String[] otherIds = memberIds.stream().filter(id -> !id.equals(recipient)).toList().toArray(String[]::new);
+        // target 을 제외한 participantIds 생성
+        String[] participantIds = memberIds.stream().filter(id -> !id.equals(target)).toList().toArray(String[]::new);
 
-            // 메시지 전송
-            InitProtocolEvent event = InitProtocolEvent.builder()
-                    .participantType(type)
-                    .sid(sid)
-                    .otherIds(otherIds)
-                    .threshold(threshold)
-                    .messageBytes(messageBytes)
-                    .participantIds(participantIds)
-                    .recipient(recipient)
-                    .build();
-            log.info("{}에게 {} 프로토콜 초기화 메시지 전송", recipient, type);
-            tssMessageBroker.publish(event);
-        });
-    }
-
-    /**
-     * 프로토콜 타입에 따라서 otherIds를 반환하는 메서드입니다..
-     * @param type 프로토콜 타입
-     * @param recipient 메시지를 받는 수신자
-     * @param target tshare일 경우 tshare의 타겟
-     * @param memberIds 해당 그룹의 멤버들
-     * @return otherIds
-     */
-    private String[] generateOtherIds(ParticipantType type, String recipient, String target, List<String> memberIds) {
-        // TRefresh일 경우
-        if(type.equals(ParticipantType.TREFRESH)) {
-            // 수신자가 타겟일 경우 otherIds 는 빈값
-            if(recipient.equals(target)) {
-                return new String[0];
-            }
-            // 수신자가 헬퍼일 경우 나머지 helper의 id 반환
-            else {
-                return memberIds.stream().filter(id -> !id.equals(recipient) && !id.equals(target)).toList().toArray(String[]::new);
-            }
-        }
-        else {
-            return memberIds.stream().filter(id -> !id.equals(recipient)).toList().toArray(String[]::new);
-        }
+        // 메시지 전송
+        InitProtocolEvent event = InitProtocolEvent.builder()
+                .participantType(type)
+                .sid(sid)
+                .otherIds(otherIds)
+                .threshold(threshold)
+                .messageBytes(messageBytes)
+                .participantIds(participantIds)
+                .recipient(recipient)
+                .target(target)
+                .build();
+        log.info("{}에게 {} 프로토콜 초기화 메시지 전송", recipient, type);
+        tssMessageBroker.publish(event);
     }
 }

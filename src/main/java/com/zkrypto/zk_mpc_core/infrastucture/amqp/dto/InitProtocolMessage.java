@@ -10,6 +10,7 @@ public record InitProtocolMessage(
         String[] otherIds,
         String[] participantIds,
         Integer threshold,
-        byte[] messageBytes
+        byte[] messageBytes,
+        String target
 ) {
 }

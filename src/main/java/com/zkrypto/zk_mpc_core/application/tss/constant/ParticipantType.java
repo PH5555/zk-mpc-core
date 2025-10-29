@@ -14,8 +14,9 @@ public enum ParticipantType {
     AUXINFO("AuxInfo", ProcessGroup.KEY_GENERATION),
     TSHARE("TShare", ProcessGroup.KEY_GENERATION),
 
-    // 2. REFRESH 프로세스 그룹
-    TREFRESH("TRefresh", ProcessGroup.REFRESH),
+    // 2. RECOVER 프로세스 그룹
+    TRECOVERHELPER("TRecoverHelper", ProcessGroup.RECOVER),
+    TRECOVERTARGET("TRecoverTarget", ProcessGroup.RECOVER),
 
     // 3. SIGNING 프로세스 그룹
     TPRESIGN("TPreSign", ProcessGroup.SIGNING),
@@ -41,11 +42,17 @@ public enum ParticipantType {
     /**
      * 주어진 ProcessGroup에 해당하는 첫 번째 ParticipantType을 반환합니다.
      * enum에 정의된 순서를 기준으로 첫 번째 요소를 찾습니다.
+     * recover 프로세스일 때만 타겟과 수신자를 비교해서 type을 찾습니다.
      * @param process 찾고자 하는 프로세스 그룹
      * @return 해당 그룹의 첫 번째 ParticipantType
      * @throws IllegalArgumentException 주어진 그룹에 해당하는 타입이 없을 경우
      */
-    public static ParticipantType getFirstStep(ProcessGroup process) {
+    public static ParticipantType getFirstStep(ProcessGroup process, String target, String recipient) {
+        if(process.equals(ProcessGroup.RECOVER)) {
+            if(target.equals(recipient)) return TRECOVERTARGET;
+            else return TRECOVERHELPER;
+        }
+
         return Arrays.stream(values())
                 .filter(type -> type.getProcessGroup() == process)
                 .findFirst()
