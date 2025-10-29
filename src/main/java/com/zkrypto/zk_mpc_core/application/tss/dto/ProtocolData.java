@@ -10,10 +10,18 @@ import java.util.List;
 
 @Getter
 @NoArgsConstructor
-@AllArgsConstructor
-@Builder
 public class ProtocolData {
     private List<String> memberIds;
     private Integer threshold;
     private byte[] messageBytes;
+    private String target;
+    private List<String> participantIds;
+
+    public ProtocolData(List<String> memberIds, Integer threshold, byte[] messageBytes, String target) {
+        this.memberIds = memberIds;
+        this.threshold = threshold;
+        this.messageBytes = messageBytes;
+        this.target = target;
+        this.participantIds = memberIds.stream().filter(id -> !id.equals(target)).toList();
+    }
 }

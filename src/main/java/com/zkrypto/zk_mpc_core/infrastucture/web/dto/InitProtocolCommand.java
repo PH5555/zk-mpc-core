@@ -11,6 +11,7 @@ public record InitProtocolCommand(
         @NotNull String sid,
         @NotNull List<String> memberIds,
         @NotNull Integer threshold,
+        String target,
         byte[] messageBytes
 ) {
 }
