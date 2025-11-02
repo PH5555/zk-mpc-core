@@ -156,13 +156,18 @@ public class TssService {
                 ? protocolData.getMemberIds().stream().filter(mid -> !mid.equals(message.getFrom().toString())).toList() // Is_broadcast이면 보내는 사람을 제외한 모든 참여자
                 : List.of(message.getTo().toString()); // Is_broadcast가 false이면 한명
 
+        // 타입 결정
+        String messageType = (type.equals(ParticipantType.TRECOVERHELPER.getTypeName()) && message.extractRound().equals(Round.R3_ENCRYPTED_SHARE))
+                ? ParticipantType.TRECOVERTARGET.getTypeName()
+                : type;
+
         // 각 수신자에게 메시지 전송
         recipients.forEach(recipient -> {
             log.info("{}에게 메시지 전송 : {}", recipient ,StringUtils.abbreviate(JsonUtil.toString(message), 200));
             MessageProcessEndEvent event = MessageProcessEndEvent.builder()
                     .recipient(recipient)
                     .message(JsonUtil.toString(message))
-                    .type(type)
+                    .type(messageType)
                     .sid(sid)
                     .build();
             tssMessageBroker.publish(event);

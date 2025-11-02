@@ -17,6 +17,9 @@ public enum Round {
     ROUND_TWO_BROADCAST("RoundTwoBroadcast", ParticipantType.TPRESIGN),
     ROUND_TWO("RoundTwo", ParticipantType.TPRESIGN),
 
+    // TRecover rounds
+    R3_ENCRYPTED_SHARE("R3EncryptedShare", ParticipantType.TRECOVERHELPER),
+
     // another rounds
     ROUND_DEFAULT("RoundDefault", null);
 
