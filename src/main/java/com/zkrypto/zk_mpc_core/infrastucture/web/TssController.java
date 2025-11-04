@@ -20,7 +20,7 @@ public class TssController {
     @PostMapping("/start")
     public ResponseEntity<Void> startProtocol(@RequestBody InitProtocolCommand command) {
         log.info("{} process 시작", command.process());
-        tssService.startProtocol(command);
+        tssService.initProtocol(command);
         return ResponseEntity.ok().build();
     }
 }

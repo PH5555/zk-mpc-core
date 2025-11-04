@@ -37,7 +37,7 @@ public class MessageConsumer {
             key = RabbitMqConfig.TSS_INIT_END_ROUTING_KEY_PREFIX
     ))
     public void handleInitProtocolEndMessage(InitProtocolEndMessage message) {
-        tssService.checkInitProtocolStatus(message.sid(), message.memberId(), message.type());
+        tssService.confirmInitiation(message.sid(), message.memberId(), message.type());
     }
 
     @RabbitListener(bindings = @QueueBinding(
@@ -46,7 +46,7 @@ public class MessageConsumer {
             key = RabbitMqConfig.TSS_PROTOCOL_COMPLETE_KEY_PREFIX
     ))
     public void handleProtocolCompleteMessage(ProtocolCompleteMessage message) {
-        tssService.checkProtocolCompleteStatus(message.sid(), message.memberId(), message.type());
+        tssService.confirmProtocolCompletion(message.sid(), message.memberId(), message.type());
     }
 
     @RabbitListener(bindings = @QueueBinding(
@@ -55,6 +55,6 @@ public class MessageConsumer {
             key = RabbitMqConfig.TSS_ROUND_COMPLETE_KEY_PREFIX
     ))
     public void handleRoundCompleteMessage(RoundCompleteMessage message) {
-        tssService.checkRoundStatus(message.type(), message.roundName(), message.sid());
+        tssService.confirmRoundStatus(message.type(), message.roundName(), message.sid());
     }
 }
