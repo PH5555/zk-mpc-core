@@ -4,6 +4,7 @@ import com.zkrypto.zk_mpc_core.application.tss.dto.ProtocolData;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -18,6 +19,12 @@ public class ProtocolSessionService {
 
     public void clearSession(String groupId) {
         session.remove(groupId);
+    }
+
+    public void setParticipants(String groupId, List<String> participantIds) {
+        ProtocolData protocolData = session.getOrDefault(groupId, new ProtocolData());
+        protocolData.setParticipantIds(participantIds);
+        session.compute(groupId, (k, v) -> protocolData);
     }
 
     public ProtocolData getSession(String groupId) {

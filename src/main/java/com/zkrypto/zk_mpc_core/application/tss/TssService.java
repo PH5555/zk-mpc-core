@@ -7,6 +7,7 @@ import com.zkrypto.zk_mpc_core.application.session.thresholdSessionService;
 import com.zkrypto.zk_mpc_core.application.session.MessageSessionService;
 import com.zkrypto.zk_mpc_core.application.session.ProtocolSessionService;
 import com.zkrypto.zk_mpc_core.application.tss.constant.ParticipantType;
+import com.zkrypto.zk_mpc_core.application.tss.constant.ProcessGroup;
 import com.zkrypto.zk_mpc_core.application.tss.constant.Round;
 import com.zkrypto.zk_mpc_core.application.tss.dto.ContinueMessage;
 import com.zkrypto.zk_mpc_core.application.message.dto.InitProtocolEndEvent;
@@ -110,8 +111,14 @@ public class TssService {
 
         // 임계치보다 초기화 완료 클라이언트 수가 많아지면 프로토콜 시작 메시지 전송
         if(currentCount >= totalParticipants) {
+            List<String> participantIds = type.equals(ParticipantType.TRECOVERHELPER) ?
+                    protocolData.getParticipantIds().stream().filter(id -> !id.equals(protocolData.getTarget())).toList():
+                    protocolData.getParticipantIds();
+2
+            protocolSessionService.setParticipants(sid, participantIds);
             thresholdSessionService.clearSession(sid);
-            protocolData.getParticipantIds().forEach(recipient -> {
+
+            participantIds.forEach(recipient -> {
                 log.info("{} 프로토콜 시작 메시지 전송: {}", type, recipient);
                 InitProtocolEndEvent event = InitProtocolEndEvent.builder()
                         .sid(sid)
@@ -156,10 +163,18 @@ public class TssService {
                 ? protocolData.getMemberIds().stream().filter(mid -> !mid.equals(message.getFrom().toString())).toList() // Is_broadcast이면 보내는 사람을 제외한 모든 참여자
                 : List.of(message.getTo().toString()); // Is_broadcast가 false이면 한명
 
+        boolean isTargetMessageCondition = type.equals(ParticipantType.TRECOVERHELPER.getTypeName())
+                && message.extractRound().equals(Round.R3_ENCRYPTED_SHARE);
+
         // 타입 결정
-        String messageType = (type.equals(ParticipantType.TRECOVERHELPER.getTypeName()) && message.extractRound().equals(Round.R3_ENCRYPTED_SHARE))
+        String messageType = isTargetMessageCondition
                 ? ParticipantType.TRECOVERTARGET.getTypeName()
                 : type;
+
+        // 참여자 결정
+        if(isTargetMessageCondition) {
+            protocolSessionService.setParticipants(sid, List.of(protocolData.getTarget()));
+        }
 
         // 각 수신자에게 메시지 전송
         recipients.forEach(recipient -> {
@@ -215,15 +230,18 @@ public class TssService {
         // 다음 프로토콜 존재하지 않으면 완전 종료
         if(currentCount >= totalParticipants) {
             thresholdSessionService.clearSession(sid);
-            type.getNextStep().ifPresentOrElse(
+            type.getNextStep(protocolData.getProcessGroup()).ifPresentOrElse(
                     nextType -> {
                         log.info("{} 종료, {} 실행", type, nextType);
-                        protocolData.getMemberIds().forEach(recipient -> {
-                            sendInitMessage(protocolData.getMemberIds(), recipient, nextType, sid, protocolData.getThreshold(), protocolData.getMessageBytes(), protocolData.getTarget());
+                        protocolData.getParticipantIds().forEach(recipient -> {
+                            ParticipantType typeResult = nextType;
+                            if(nextType.equals(ParticipantType.TRECOVERHELPER) && recipient.equals(protocolData.getTarget())) {
+                                typeResult = ParticipantType.TRECOVERTARGET;
+                            }
+                            sendInitMessage(protocolData.getMemberIds(), recipient, typeResult, sid, protocolData.getThreshold(), protocolData.getMessageBytes(), protocolData.getTarget());
                         });
                     },
                     () -> {
-                        // TODO: 프로토콜에 따라서 다음 과정 진행 (tshare: 퍼블릭키 저장, tsign: 블록체인 업로드)
                         protocolSessionService.clearSession(sid);
                         log.info("모든 참여자 종료");
                     });
@@ -236,12 +254,12 @@ public class TssService {
      */
     public void startProtocol(InitProtocolCommand command) {
         // 프로토콜 데이터 저장
-        ProtocolData protocolData = new ProtocolData(command.memberIds(), command.threshold(), command.messageBytes(), command.target());
+        ProtocolData protocolData = new ProtocolData(command.process(), command.memberIds(), command.threshold(), command.messageBytes(), command.target());
         protocolSessionService.addSession(command.sid(), protocolData);
 
         command.memberIds().forEach(recipient -> {
             // 실행해야하는 첫번째 프로토콜 조회
-            ParticipantType participantType = ParticipantType.getFirstStep(command.process(), command.target(), recipient);
+            ParticipantType participantType = ParticipantType.getFirstStep(command.process());
 
             // 실행 메시지 전송
             sendInitMessage(command.memberIds(), recipient, participantType, command.sid(), command.threshold(), command.messageBytes(), command.target());
@@ -259,8 +277,11 @@ public class TssService {
     private void sendInitMessage(List<String> memberIds, String recipient, ParticipantType type, String sid, Integer threshold, byte[] messageBytes, String target) {
         // 해당 메시지를 받는 사람을 제외한 otherIds 생성
         String[] otherIds = memberIds.stream().filter(id -> !id.equals(recipient)).toList().toArray(String[]::new);
-        // target 을 제외한 participantIds 생성
-        String[] participantIds = memberIds.stream().filter(id -> !id.equals(target)).toList().toArray(String[]::new);
+
+        // recover이면 target 을 제외한 participantIds 생성 아니면 member 모두 참여자
+        String[] participantIds = type.getProcessGroup().equals(ProcessGroup.RECOVER) ?
+                memberIds.stream().filter(id -> !id.equals(target)).toList().toArray(String[]::new) :
+                memberIds.toArray(String[]::new);
 
         // 메시지 전송
         InitProtocolEvent event = InitProtocolEvent.builder()

@@ -11,10 +11,11 @@ import java.util.Optional;
 public enum ParticipantType {
 
     // 1. KEY_GENERATION 프로세스 그룹
-    AUXINFO("AuxInfo", ProcessGroup.KEY_GENERATION),
+    AUXINFO_GENERATION("AuxInfo", ProcessGroup.KEY_GENERATION),
     TSHARE("TShare", ProcessGroup.KEY_GENERATION),
 
     // 2. RECOVER 프로세스 그룹
+    AUXINFO_RECOVER("AuxInfo", ProcessGroup.RECOVER),
     TRECOVERHELPER("TRecoverHelper", ProcessGroup.RECOVER),
     TRECOVERTARGET("TRecoverTarget", ProcessGroup.RECOVER),
 
@@ -30,13 +31,18 @@ public enum ParticipantType {
      * 프로세스의 마지막 단계이거나 단일 단계 프로세스일 경우 Optional.empty()를 반환합니다.
      * @return Optional<ParticipantType> 다음 단계
      */
-    public Optional<ParticipantType> getNextStep() {
-        return switch (this) {
-            case AUXINFO -> Optional.of(TSHARE);
-            case TPRESIGN -> Optional.of(SIGN);
-            // TSHARE, SIGN, TREFRESH 는 각 프로세스의 마지막 단계이므로 다음이 없음
-            default -> Optional.empty();
-        };
+    public Optional<ParticipantType> getNextStep(ProcessGroup group) {
+        if(this.typeName.equals(AUXINFO_GENERATION.getTypeName()) && group.equals(ProcessGroup.KEY_GENERATION)) {
+            return Optional.of(TSHARE);
+        }
+        if(this.typeName.equals(AUXINFO_GENERATION.getTypeName()) && group.equals(ProcessGroup.RECOVER)) {
+            return Optional.of(TRECOVERHELPER);
+        }
+        if(this.equals(TPRESIGN)) {
+            return Optional.of(SIGN);
+        }
+
+        return Optional.empty();
     }
 
     /**
@@ -47,12 +53,7 @@ public enum ParticipantType {
      * @return 해당 그룹의 첫 번째 ParticipantType
      * @throws IllegalArgumentException 주어진 그룹에 해당하는 타입이 없을 경우
      */
-    public static ParticipantType getFirstStep(ProcessGroup process, String target, String recipient) {
-        if(process.equals(ProcessGroup.RECOVER)) {
-            if(target.equals(recipient)) return TRECOVERTARGET;
-            else return TRECOVERHELPER;
-        }
-
+    public static ParticipantType getFirstStep(ProcessGroup process) {
         return Arrays.stream(values())
                 .filter(type -> type.getProcessGroup() == process)
                 .findFirst()
@@ -64,6 +65,10 @@ public enum ParticipantType {
                 .filter(type -> type.getTypeName().equals(typeName))
                 .findFirst()
                 .orElseThrow(() -> new RuntimeException("participantType이 잘못됐습니다. :" + typeName));
+    }
+
+    public Boolean isContainInProcess(ProcessGroup group) {
+        return this.processGroup.equals(group);
     }
 }
 
