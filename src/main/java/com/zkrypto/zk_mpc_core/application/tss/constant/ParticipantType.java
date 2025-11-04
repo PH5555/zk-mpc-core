@@ -60,15 +60,31 @@ public enum ParticipantType {
                 .orElseThrow(() -> new RuntimeException("group에 해당하는 participantType이 없습니다."));
     }
 
+    /**
+     * 메시지를 받는 사람과 target에 따라서 TRECOVERHELPER를 TRECOVERTARGET로 변경하는 메서드입니다.
+     * 받는 사람이 target이면 TRECOVERTARGET로 변경합니다.
+     * @param recipient 메시지 받는 사람
+     * @param target recover 타겟
+     * @return 프로토콜 타입
+     */
+    public ParticipantType determineType(String recipient, String target) {
+        boolean isRecoverHelper = this.equals(ParticipantType.TRECOVERHELPER);
+        boolean isTargetRecipient = recipient.equals(target);
+
+        if (isRecoverHelper && isTargetRecipient) {
+            // 다음 단계가 TRECOVERHELPER 인데, 수신자가 바로 그 target이라면
+            // 타입은 TRECOVERTARGET이 되어야 합니다.
+            return ParticipantType.TRECOVERTARGET;
+        }
+
+        return this;
+    }
+
     public static ParticipantType of(String typeName) {
         return Arrays.stream(ParticipantType.values())
                 .filter(type -> type.getTypeName().equals(typeName))
                 .findFirst()
                 .orElseThrow(() -> new RuntimeException("participantType이 잘못됐습니다. :" + typeName));
-    }
-
-    public Boolean isContainInProcess(ProcessGroup group) {
-        return this.processGroup.equals(group);
     }
 }
 
