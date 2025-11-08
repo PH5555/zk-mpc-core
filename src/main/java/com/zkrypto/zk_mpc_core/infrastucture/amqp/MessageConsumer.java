@@ -1,11 +1,11 @@
 package com.zkrypto.zk_mpc_core.infrastucture.amqp;
 
+import com.zkrypto.dto.InitProtocolEndMessage;
+import com.zkrypto.dto.ProceedRoundMessage;
+import com.zkrypto.dto.ProtocolCompleteMessage;
+import com.zkrypto.dto.RoundCompleteMessage;
 import com.zkrypto.zk_mpc_core.application.tss.TssService;
 import com.zkrypto.zk_mpc_core.common.config.RabbitMqConfig;
-import com.zkrypto.zk_mpc_core.infrastucture.amqp.dto.InitProtocolEndMessage;
-import com.zkrypto.zk_mpc_core.infrastucture.amqp.dto.ProceedRoundMessage;
-import com.zkrypto.zk_mpc_core.infrastucture.amqp.dto.ProtocolCompleteMessage;
-import com.zkrypto.zk_mpc_core.infrastucture.amqp.dto.RoundCompleteMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.core.ExchangeTypes;
@@ -23,7 +23,7 @@ public class MessageConsumer {
     private final TssService tssService;
 
     @RabbitListener(bindings = @QueueBinding(
-            value = @Queue(value = "", durable = "true", exclusive = "true", autoDelete = "false"),
+            value = @Queue(value = RabbitMqConfig.ROUND_QUEUE, durable = "true", exclusive = "false", autoDelete = "false"),
             exchange = @Exchange(value = RabbitMqConfig.TSS_EXCHANGE, type = ExchangeTypes.TOPIC),
             key = RabbitMqConfig.TSS_ROUND_END_ROUTING_KEY_PREFIX
     ))
@@ -32,7 +32,7 @@ public class MessageConsumer {
     }
 
     @RabbitListener(bindings = @QueueBinding(
-            value = @Queue(value = "", durable = "true", exclusive = "true", autoDelete = "false"),
+            value = @Queue(value = RabbitMqConfig.INIT_HANDLE_QUEUE, durable = "true", exclusive = "false", autoDelete = "false"),
             exchange = @Exchange(value = RabbitMqConfig.TSS_EXCHANGE, type = ExchangeTypes.TOPIC),
             key = RabbitMqConfig.TSS_INIT_END_ROUTING_KEY_PREFIX
     ))
@@ -41,7 +41,7 @@ public class MessageConsumer {
     }
 
     @RabbitListener(bindings = @QueueBinding(
-            value = @Queue(value = "", durable = "true", exclusive = "true", autoDelete = "false"),
+            value = @Queue(value = RabbitMqConfig.PROTOCOL_COMPLETE_HANDLE_QUEUE, durable = "true", exclusive = "false", autoDelete = "false"),
             exchange = @Exchange(value = RabbitMqConfig.TSS_EXCHANGE, type = ExchangeTypes.TOPIC),
             key = RabbitMqConfig.TSS_PROTOCOL_COMPLETE_KEY_PREFIX
     ))
@@ -50,7 +50,7 @@ public class MessageConsumer {
     }
 
     @RabbitListener(bindings = @QueueBinding(
-            value = @Queue(value = "", durable = "true", exclusive = "true", autoDelete = "false"),
+            value = @Queue(value = RabbitMqConfig.ROUND_COMPLETE_HANDLE_QUEUE, durable = "true", exclusive = "false", autoDelete = "false"),
             exchange = @Exchange(value = RabbitMqConfig.TSS_EXCHANGE, type = ExchangeTypes.TOPIC),
             key = RabbitMqConfig.TSS_ROUND_COMPLETE_KEY_PREFIX
     ))

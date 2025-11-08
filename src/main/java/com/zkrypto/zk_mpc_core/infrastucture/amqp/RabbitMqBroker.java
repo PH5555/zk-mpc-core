@@ -1,13 +1,13 @@
 package com.zkrypto.zk_mpc_core.infrastucture.amqp;
 
+import com.zkrypto.dto.InitProtocolMessage;
+import com.zkrypto.dto.ProceedRoundMessage;
+import com.zkrypto.dto.StartProtocolMessage;
 import com.zkrypto.zk_mpc_core.application.message.MessageBroker;
 import com.zkrypto.zk_mpc_core.application.message.dto.InitProtocolEndEvent;
 import com.zkrypto.zk_mpc_core.application.message.dto.InitProtocolEvent;
 import com.zkrypto.zk_mpc_core.application.message.dto.MessageProcessEndEvent;
 import com.zkrypto.zk_mpc_core.common.config.RabbitMqConfig;
-import com.zkrypto.zk_mpc_core.infrastucture.amqp.dto.InitProtocolMessage;
-import com.zkrypto.zk_mpc_core.infrastucture.amqp.dto.ProceedRoundMessage;
-import com.zkrypto.zk_mpc_core.infrastucture.amqp.dto.StartProtocolMessage;
 import com.zkrypto.zk_mpc_core.infrastucture.amqp.mapper.MessageMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

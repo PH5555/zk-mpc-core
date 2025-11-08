@@ -1,6 +1,6 @@
 package com.zkrypto.zk_mpc_core.application.tss.dto;
 
-import com.zkrypto.zk_mpc_core.application.tss.constant.ProcessGroup;
+import com.zkrypto.constant.ProcessGroup;
 import lombok.*;
 
 import java.util.List;

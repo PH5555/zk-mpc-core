@@ -1,5 +1,6 @@
 package com.zkrypto.zk_mpc_core.application.tss.constant;
 
+import com.zkrypto.constant.ParticipantType;
 import lombok.AllArgsConstructor;
 
 import java.util.Optional;

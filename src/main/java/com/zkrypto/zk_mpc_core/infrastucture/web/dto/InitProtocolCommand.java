@@ -1,7 +1,6 @@
 package com.zkrypto.zk_mpc_core.infrastucture.web.dto;
 
-import com.zkrypto.zk_mpc_core.application.tss.constant.ParticipantType;
-import com.zkrypto.zk_mpc_core.application.tss.constant.ProcessGroup;
+import com.zkrypto.constant.ProcessGroup;
 import jakarta.validation.constraints.NotNull;
 
 import java.util.List;

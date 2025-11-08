@@ -37,6 +37,7 @@ dependencies {
 	//rabbitmq
 	implementation 'org.springframework.boot:spring-boot-starter-amqp'
 
+	implementation files('libs/common-dto-1.0-SNAPSHOT.jar')
 	implementation 'org.apache.commons:commons-lang3:3.12.0'
 	compileOnly 'org.projectlombok:lombok'
 	annotationProcessor 'org.projectlombok:lombok'
