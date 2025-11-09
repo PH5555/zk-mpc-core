@@ -1,6 +1,6 @@
 package com.zkrypto.zk_mpc_core.common.config;
 
-import org.springframework.amqp.core.TopicExchange;
+import org.springframework.amqp.core.*;
 import org.springframework.amqp.rabbit.connection.CachingConnectionFactory;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
@@ -36,9 +36,31 @@ public class RabbitMqConfig {
     public static final String TSS_START_ROUTING_KEY_PREFIX = "topic.start";
     public static final String TSS_PROTOCOL_COMPLETE_KEY_PREFIX = "topic.complete";
 
+    public static final String TSS_DLX_EXCHANGE = "tss.dead.letter.exchange";
+    public static final String TSS_DLQ_QUEUE = "tss.dead.letter.queue";
+    public static final String TSS_DLQ_ROUTING_KEY = "tss.dead.letter.key";
+
     @Bean
     public TopicExchange tssExchange() {
         return new TopicExchange(TSS_EXCHANGE);
+    }
+
+    @Bean
+    DirectExchange deadLetterExchange() {
+        return new DirectExchange(TSS_DLX_EXCHANGE);
+    }
+
+    @Bean
+    Queue deadLetterQueue() {
+        return QueueBuilder.durable(TSS_DLQ_QUEUE).build();
+    }
+
+    @Bean
+    Binding deadLetterBinding() {
+        return BindingBuilder
+                .bind(deadLetterQueue())
+                .to(deadLetterExchange())
+                .with(TSS_DLQ_ROUTING_KEY);
     }
 
     @Bean
