@@ -15,16 +15,18 @@ import java.nio.charset.StandardCharsets;
 @Slf4j
 @Component
 public class DeadLetterConsumer {
-    @RabbitListener(bindings = @QueueBinding(
-            value = @Queue(value = RabbitMqConfig.TSS_DLQ_QUEUE, durable = "true", exclusive = "false", autoDelete = "false"),
-            exchange = @Exchange(value = RabbitMqConfig.TSS_DLX_EXCHANGE, type = ExchangeTypes.DIRECT),
-            key = RabbitMqConfig.TSS_DLQ_ROUTING_KEY
+    @RabbitListener(
+            bindings = @QueueBinding(
+                value = @Queue(value = RabbitMqConfig.TSS_DLQ_QUEUE, durable = "true", exclusive = "false", autoDelete = "false"),
+                exchange = @Exchange(value = RabbitMqConfig.TSS_DLX_EXCHANGE, type = ExchangeTypes.DIRECT),
+                key = RabbitMqConfig.TSS_DLQ_ROUTING_KEY
     ))
     public void handleDeadLetter(Message failedMessage) {
         String messageBody = new String(failedMessage.getBody(), StandardCharsets.UTF_8);
 
         log.info("----------------------------------------");
         log.info(" [DLQ LISTENER] Detected NACK message: " + messageBody);
+        log.info(" [DLQ THREAD] Executing on thread: " + Thread.currentThread().getName());
         log.info("----------------------------------------");
     }
 }

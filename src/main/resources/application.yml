@@ -10,5 +10,8 @@ spring:
     listener:
       simple:
         default-requeue-rejected: false
+        concurrency: 3       # 최소 소비자(스레드) 수
+        max-concurrency: 10  # 최대 소비자(스레드) 수
+        prefetch: 1
 server:
   port: 8083

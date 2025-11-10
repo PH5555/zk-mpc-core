@@ -11,8 +11,8 @@ import java.util.concurrent.ConcurrentHashMap;
 public class thresholdSessionService {
     Map<String, Integer> session = new ConcurrentHashMap<>();
 
-    public void addSession(String key) {
-        session.compute(key, (k, v) -> (v == null) ? 1 : v + 1);
+    public Integer addSession(String key) {
+        return session.compute(key, (k, v) -> (v == null) ? 1 : v + 1);
     }
 
     public void clearSession(String key) {

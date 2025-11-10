@@ -60,9 +60,9 @@ public class TssService {
     public void confirmInitiation(String sid, String memberId, ParticipantType type) {
         // 팩토리 세션에 추가
         log.info("{}으로부터 프로토콜 초기화 종료 메시지 받음", memberId);
-        thresholdSessionService.addSession(sid);
+        Integer currentCount = thresholdSessionService.addSession(sid);
 
-        checkThresholdAndExecute(sid, (protocolData -> {
+        checkThresholdAndExecute(sid, currentCount, (protocolData -> {
             // TRECOVERHELPER, TRECOVERTARGET 초기화 후에는 helper만 프로토콜 시작하도록 변경
             List<String> participantIds = type.equals(ParticipantType.TRECOVERHELPER) || type.equals(ParticipantType.TRECOVERTARGET) ?
                     protocolData.getParticipantIds().stream().filter(id -> !id.equals(protocolData.getTarget())).toList():
@@ -151,9 +151,9 @@ public class TssService {
      */
     public void confirmProtocolCompletion(String sid, String memberId, ParticipantType type) {
         log.info("{}으로부터 프로토콜 종료 메시지 수신", memberId);
-        thresholdSessionService.addSession(sid);
+        Integer currentCount = thresholdSessionService.addSession(sid);
 
-        checkThresholdAndExecute(sid, (protocolData -> {
+        checkThresholdAndExecute(sid, currentCount, (protocolData -> {
             advanceToNextStepOrFinalize(sid, type, protocolData);
         }));
     }
@@ -200,13 +200,14 @@ public class TssService {
      * @param sid 세션 ID (그룹 ID)
      * @param onThresholdReached 임계치 도달 시 실행할 작업
      */
-    private void checkThresholdAndExecute(String sid, Consumer<ProtocolData> onThresholdReached) {
+    private void checkThresholdAndExecute(String sid, int currentCount, Consumer<ProtocolData> onThresholdReached) {
         // 현재 그룹의 프로토콜 정보 조회
         ProtocolData protocolData = protocolSessionService.getSession(sid);
 
         // 임계치 (전체 참여자 수) 및 현재 카운트 조회
         int totalParticipants = protocolData.getParticipantIds().size();
-        int currentCount = thresholdSessionService.getSessionCount(sid);
+
+        log.info("total participants : {}, current: {}", totalParticipants, currentCount);
 
         // 임계치 도달 여부 확인
         if (currentCount >= totalParticipants) {
