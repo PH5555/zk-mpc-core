@@ -1,5 +1,7 @@
 package com.zkrypto.zk_mpc_core.infrastucture.amqp;
 
+import com.zkrypto.dto.ErrorMessage;
+import com.zkrypto.zk_mpc_core.common.annotation.PreventDuplicate;
 import com.zkrypto.zk_mpc_core.common.config.RabbitMqConfig;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.core.ExchangeTypes;
@@ -15,18 +17,18 @@ import java.nio.charset.StandardCharsets;
 @Slf4j
 @Component
 public class DeadLetterConsumer {
+
+    @PreventDuplicate
     @RabbitListener(
             bindings = @QueueBinding(
                 value = @Queue(value = RabbitMqConfig.TSS_DLQ_QUEUE, durable = "true", exclusive = "false", autoDelete = "false"),
                 exchange = @Exchange(value = RabbitMqConfig.TSS_DLX_EXCHANGE, type = ExchangeTypes.DIRECT),
                 key = RabbitMqConfig.TSS_DLQ_ROUTING_KEY
     ))
-    public void handleDeadLetter(Message failedMessage) {
-        String messageBody = new String(failedMessage.getBody(), StandardCharsets.UTF_8);
-
+    public void handleDeadLetter(ErrorMessage errorMessage) {
         log.info("----------------------------------------");
-        log.info(" [DLQ LISTENER] Detected NACK message: " + messageBody);
-        log.info(" [DLQ THREAD] Executing on thread: " + Thread.currentThread().getName());
+        log.info("[DLQ LISTENER] Detected NACK message: " + errorMessage.sessionId());
+        log.info("[DLQ THREAD] Executing on thread: " + Thread.currentThread().getName());
         log.info("----------------------------------------");
     }
 }

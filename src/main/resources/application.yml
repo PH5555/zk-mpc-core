@@ -13,5 +13,9 @@ spring:
         concurrency: 3       # 최소 소비자(스레드) 수
         max-concurrency: 10  # 최대 소비자(스레드) 수
         prefetch: 1
+
+  data:
+    redis:
+      address: "http://127.0.0.1:6379"
 server:
   port: 8083
