@@ -18,6 +18,7 @@ import com.zkrypto.zk_mpc_core.infrastucture.web.dto.InitProtocolCommand;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.Optional;
@@ -156,6 +157,31 @@ public class TssService {
         checkThresholdAndExecute(sid, currentCount, (protocolData -> {
             advanceToNextStepOrFinalize(sid, type, protocolData);
         }));
+    }
+
+    /**
+     * 프로토콜을 재시작하는 메서드입니다.
+     * @param sid 그룹 id
+     */
+    public void restartProtocol(String sid) {
+        new Thread(() -> {
+            try{
+                Thread.sleep(10000);
+                log.info("재시작 로직 시작");
+                ProtocolData protocolData = protocolSessionService.getSession(sid);
+
+                protocolData.getMemberIds().forEach(recipient -> {
+                    // 실행해야하는 첫번째 프로토콜 조회
+                    ParticipantType participantType = ParticipantType.getFirstStep(protocolData.getProcessGroup());
+
+                    // 실행 메시지 전송
+                    sendInitMessage(protocolData.getMemberIds(), recipient, participantType, sid, protocolData.getThreshold(), protocolData.getMessageBytes(), protocolData.getTarget());
+                });
+            }
+            catch (Exception e) {
+                Thread.currentThread().interrupt();
+            }
+        }).start();
     }
 
     /**
