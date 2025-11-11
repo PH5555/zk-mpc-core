@@ -12,6 +12,7 @@ public record InitProtocolEvent(
         String[] participantIds,
         Integer threshold,
         byte[] messageBytes,
-        String target
+        String target,
+        Boolean isRestart
 ) {
 }

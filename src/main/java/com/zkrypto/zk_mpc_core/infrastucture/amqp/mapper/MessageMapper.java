@@ -24,7 +24,8 @@ public class MessageMapper {
                 event.participantIds(),
                 event.threshold(),
                 event.messageBytes(),
-                event.target()
+                event.target(),
+                event.isRestart()
         );
     }
 }

@@ -47,7 +47,7 @@ public class TssService {
             ParticipantType participantType = ParticipantType.getFirstStep(command.process());
 
             // 실행 메시지 전송
-            sendInitMessage(command.memberIds(), recipient, participantType, command.sid(), command.threshold(), command.messageBytes(), command.target());
+            sendInitMessage(command.memberIds(), recipient, participantType, command.sid(), command.threshold(), command.messageBytes(), command.target(), false);
         });
     }
 
@@ -164,24 +164,24 @@ public class TssService {
      * @param sid 그룹 id
      */
     public void restartProtocol(String sid) {
-        new Thread(() -> {
-            try{
-                Thread.sleep(10000);
-                log.info("재시작 로직 시작");
-                ProtocolData protocolData = protocolSessionService.getSession(sid);
+        // 실행중이던 프로토콜 조회
+        ProtocolData protocolData = protocolSessionService.getSession(sid);
 
-                protocolData.getMemberIds().forEach(recipient -> {
-                    // 실행해야하는 첫번째 프로토콜 조회
-                    ParticipantType participantType = ParticipantType.getFirstStep(protocolData.getProcessGroup());
+        protocolData.getMemberIds().forEach(recipient -> {
+            // 실행해야하는 첫번째 프로토콜 조회
+            ParticipantType participantType = ParticipantType.getFirstStep(protocolData.getProcessGroup());
 
-                    // 실행 메시지 전송
-                    sendInitMessage(protocolData.getMemberIds(), recipient, participantType, sid, protocolData.getThreshold(), protocolData.getMessageBytes(), protocolData.getTarget());
-                });
-            }
-            catch (Exception e) {
-                Thread.currentThread().interrupt();
-            }
-        }).start();
+            // 재실행 메시지 전송
+            sendInitMessage(
+                    protocolData.getMemberIds(),
+                    recipient,
+                    participantType,
+                    sid,
+                    protocolData.getThreshold(),
+                    protocolData.getMessageBytes(),
+                    protocolData.getTarget(),
+                    true);
+        });
     }
 
     /**
@@ -284,7 +284,8 @@ public class TssService {
                     sid,
                     protocolData.getThreshold(),
                     protocolData.getMessageBytes(),
-                    protocolData.getTarget()
+                    protocolData.getTarget(),
+                    false
             );
         });
     }
@@ -297,7 +298,7 @@ public class TssService {
      * @param threshold 임계치
      * @param messageBytes 메시지
      */
-    private void sendInitMessage(List<String> memberIds, String recipient, ParticipantType type, String sid, Integer threshold, byte[] messageBytes, String target) {
+    private void sendInitMessage(List<String> memberIds, String recipient, ParticipantType type, String sid, Integer threshold, byte[] messageBytes, String target, Boolean isRestart) {
         // 해당 메시지를 받는 사람을 제외한 otherIds 생성
         String[] otherIds = memberIds.stream().filter(id -> !id.equals(recipient)).toArray(String[]::new);
 
@@ -316,6 +317,7 @@ public class TssService {
                 .participantIds(participantIds)
                 .recipient(recipient)
                 .target(target)
+                .isRestart(isRestart)
                 .build();
         log.info("{}에게 {} 프로토콜 초기화 메시지 전송", recipient, type);
         tssMessageBroker.publish(event);

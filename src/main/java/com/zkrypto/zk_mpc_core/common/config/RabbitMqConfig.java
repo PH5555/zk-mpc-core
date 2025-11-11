@@ -27,9 +27,11 @@ public class RabbitMqConfig {
     public static final String INIT_HANDLE_QUEUE = "tss.core.init.handle";
     public static final String PROTOCOL_COMPLETE_HANDLE_QUEUE = "tss.core.protocol.complete.handle";
     public static final String ROUND_COMPLETE_HANDLE_QUEUE = "tss.core.round.complete.handle";
+    public static final String ERROR_HANDLE_QUEUE = "tss.core.error.handle";
 
     public static final String TSS_ROUND_END_ROUTING_KEY_PREFIX = "topic.round.end";
     public static final String TSS_ROUND_COMPLETE_KEY_PREFIX = "topic.round.complete";
+    public static final String TSS_ERROR_HANDLE_KEY_PREFIX = "topic.error.handle";
     public static final String TSS_ROUND_ROUTING_KEY_PREFIX = "topic.round";
     public static final String TSS_INIT_ROUTING_KEY_PREFIX = "topic.init";
     public static final String TSS_INIT_END_ROUTING_KEY_PREFIX = "topic.init.end";

@@ -1,9 +1,6 @@
 package com.zkrypto.zk_mpc_core.infrastucture.amqp;
 
-import com.zkrypto.dto.InitProtocolEndMessage;
-import com.zkrypto.dto.ProceedRoundMessage;
-import com.zkrypto.dto.ProtocolCompleteMessage;
-import com.zkrypto.dto.RoundCompleteMessage;
+import com.zkrypto.dto.*;
 import com.zkrypto.zk_mpc_core.application.tss.TssService;
 import com.zkrypto.zk_mpc_core.common.config.RabbitMqConfig;
 import lombok.RequiredArgsConstructor;
@@ -56,5 +53,14 @@ public class MessageConsumer {
     ))
     public void handleRoundCompleteMessage(RoundCompleteMessage message) {
         tssService.confirmRoundStatus(message.type(), message.roundName(), message.sid());
+    }
+
+    @RabbitListener(bindings = @QueueBinding(
+            value = @Queue(value = RabbitMqConfig.ERROR_HANDLE_QUEUE, durable = "true", exclusive = "false", autoDelete = "false"),
+            exchange = @Exchange(value = RabbitMqConfig.TSS_EXCHANGE, type = ExchangeTypes.TOPIC),
+            key = RabbitMqConfig.TSS_ERROR_HANDLE_KEY_PREFIX
+    ))
+    public void handleErrorMessage(ErrorMessage message) {
+        tssService.restartProtocol(message.sid());
     }
 }
