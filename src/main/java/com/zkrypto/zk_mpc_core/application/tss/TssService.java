@@ -18,6 +18,7 @@ import com.zkrypto.zk_mpc_core.application.tss.dto.DelegateOutput;
 import com.zkrypto.zk_mpc_core.application.tss.dto.ProtocolData;
 import com.zkrypto.zk_mpc_core.common.util.JsonUtil;
 import com.zkrypto.zk_mpc_core.common.util.Web3Util;
+import com.zkrypto.zk_mpc_core.infrastucture.mpcRest.dto.response.TransactionResponse;
 import com.zkrypto.zk_mpc_core.infrastucture.web.dto.InitProtocolCommand;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -283,7 +284,7 @@ public class TssService {
             updatePublicKey(sid, message);
         }
         else if(participantType.equals(ParticipantType.SIGN)) {
-            recoverSignatureAndSend(protocolData, message);
+            recoverSignatureAndSend(protocolData, sid, message);
         }
     }
 
@@ -295,11 +296,22 @@ public class TssService {
         mpcRestPort.setAddress(sid, publicKey, address);
     }
 
-    private void recoverSignatureAndSend(ProtocolData protocolData, String message) {
+    private void recoverSignatureAndSend(ProtocolData protocolData, String sid, String message) {
         Map<String, Object> parsedMessage = JsonUtil.parse(message);
 
+        String publicKey = mpcRestPort.getPublicKey();
+        TransactionResponse lastTransaction = mpcRestPort.getLastTransaction(sid);
+
         // 블록체인 업로드
-        blockchainPort.sendTransaction(protocolData.getMessageBytes(), parsedMessage.get("r").toString(), parsedMessage.get("s").toString());
+        blockchainPort.sendTransaction(
+                protocolData.getMessageBytes(),
+                parsedMessage.get("r").toString(),
+                parsedMessage.get("s").toString(),
+                publicKey,
+                lastTransaction.nonce(),
+                lastTransaction.value(),
+                lastTransaction.toAddress()
+        );
     }
 
     /**

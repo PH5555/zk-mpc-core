@@ -19,3 +19,6 @@ spring:
       address: "http://127.0.0.1:6379"
 server:
   port: 8083
+
+blockchain:
+  url: http://61.74.32.229:8545

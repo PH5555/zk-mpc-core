@@ -1,6 +1,7 @@
 package com.zkrypto.zk_mpc_core.infrastucture.mpcRest;
 
 import com.zkrypto.zk_mpc_core.application.mpcRest.MpcRestPort;
+import com.zkrypto.zk_mpc_core.infrastucture.mpcRest.dto.response.TransactionResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
@@ -20,5 +21,10 @@ public class MpcRestTemplate implements MpcRestPort {
     @Override
     public String getPublicKey() {
         return "";
+    }
+
+    @Override
+    public TransactionResponse getLastTransaction(String sid) {
+        return null;
     }
 }
