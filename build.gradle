@@ -43,6 +43,9 @@ dependencies {
 	//aop
 	implementation 'org.springframework.boot:spring-boot-starter-aop'
 
+	//web3
+	implementation 'org.web3j:core:4.10.0'
+
 	implementation files('libs/common-dto-1.0-SNAPSHOT.jar')
 	implementation 'org.apache.commons:commons-lang3:3.12.0'
 	compileOnly 'org.projectlombok:lombok'

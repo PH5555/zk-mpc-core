@@ -2,9 +2,12 @@ package com.zkrypto.zk_mpc_core.application.tss;
 
 import com.zkrypto.constant.ParticipantType;
 import com.zkrypto.constant.ProcessGroup;
+import com.zkrypto.cryptolib.TssBridge;
+import com.zkrypto.zk_mpc_core.application.blockchain.BlockchainPort;
 import com.zkrypto.zk_mpc_core.application.message.MessageBroker;
 import com.zkrypto.zk_mpc_core.application.message.dto.InitProtocolEvent;
 import com.zkrypto.zk_mpc_core.application.message.dto.MessageProcessEndEvent;
+import com.zkrypto.zk_mpc_core.application.mpcRest.MpcRestPort;
 import com.zkrypto.zk_mpc_core.application.session.thresholdSessionService;
 import com.zkrypto.zk_mpc_core.application.session.MessageSessionService;
 import com.zkrypto.zk_mpc_core.application.session.ProtocolSessionService;
@@ -14,13 +17,17 @@ import com.zkrypto.zk_mpc_core.application.message.dto.InitProtocolEndEvent;
 import com.zkrypto.zk_mpc_core.application.tss.dto.DelegateOutput;
 import com.zkrypto.zk_mpc_core.application.tss.dto.ProtocolData;
 import com.zkrypto.zk_mpc_core.common.util.JsonUtil;
+import com.zkrypto.zk_mpc_core.common.util.Web3Util;
 import com.zkrypto.zk_mpc_core.infrastucture.web.dto.InitProtocolCommand;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.web3j.crypto.Keys;
+
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.function.Consumer;
 
@@ -32,6 +39,8 @@ public class TssService {
     private final MessageSessionService messageSessionService;
     private final thresholdSessionService thresholdSessionService;
     private final ProtocolSessionService protocolSessionService;
+    private final BlockchainPort blockchainPort;
+    private final MpcRestPort mpcRestPort;
 
     /**
      * 프로세스 그룹에 따라서 프로토콜을 초기화하는 메시지를 전송하는 메서드입니다.
@@ -150,12 +159,12 @@ public class TssService {
      * @param memberId 클라이언트 id
      * @param type 메시지 타입
      */
-    public void confirmProtocolCompletion(String sid, String memberId, ParticipantType type) {
+    public void confirmProtocolCompletion(String sid, String memberId, ParticipantType type, String message) {
         log.info("{}으로부터 프로토콜 종료 메시지 수신", memberId);
         Integer currentCount = thresholdSessionService.addSession(sid);
 
         checkThresholdAndExecute(sid, currentCount, (protocolData -> {
-            advanceToNextStepOrFinalize(sid, type, protocolData);
+            advanceToNextStepOrFinalize(sid, type, protocolData, message);
         }));
     }
 
@@ -251,7 +260,7 @@ public class TssService {
      * @param currentType 현재 완료된 프로토콜 타입
      * @param protocolData 프로토콜 데이터
      */
-    private void advanceToNextStepOrFinalize(String sid, ParticipantType currentType, ProtocolData protocolData) {
+    private void advanceToNextStepOrFinalize(String sid, ParticipantType currentType, ProtocolData protocolData, String message) {
         // 현재 프로토콜 타입의 다음 단계를 조회
         Optional<ParticipantType> nextStep = currentType.getNextStep(protocolData.getProcessGroup());
 
@@ -262,9 +271,35 @@ public class TssService {
         } else {
             // 다음 단계가 없으면 프로세스 종료
             // 프로토콜 세션 정리
+            executePostLogic(sid, currentType, protocolData, message);
             protocolSessionService.clearSession(sid);
+
             log.info("모든 참여자 종료");
         }
+    }
+
+    private void executePostLogic(String sid, ParticipantType participantType, ProtocolData protocolData, String message) {
+        if(participantType.equals(ParticipantType.TSHARE)) {
+            updatePublicKey(sid, message);
+        }
+        else if(participantType.equals(ParticipantType.SIGN)) {
+            recoverSignatureAndSend(protocolData, message);
+        }
+    }
+
+    private void updatePublicKey(String sid, String message) {
+        String publicKey = Web3Util.recoverPublicKey(message);
+        String address = Keys.getAddress(publicKey);
+
+        //api 호출
+        mpcRestPort.setAddress(sid, publicKey, address);
+    }
+
+    private void recoverSignatureAndSend(ProtocolData protocolData, String message) {
+        Map<String, Object> parsedMessage = JsonUtil.parse(message);
+
+        // 블록체인 업로드
+        blockchainPort.sendTransaction(protocolData.getMessageBytes(), parsedMessage.get("r").toString(), parsedMessage.get("s").toString());
     }
 
     /**

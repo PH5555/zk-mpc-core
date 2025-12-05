@@ -43,7 +43,7 @@ public class MessageConsumer {
             key = RabbitMqConfig.TSS_PROTOCOL_COMPLETE_KEY_PREFIX
     ))
     public void handleProtocolCompleteMessage(ProtocolCompleteMessage message) {
-        tssService.confirmProtocolCompletion(message.sid(), message.memberId(), message.type());
+        tssService.confirmProtocolCompletion(message.sid(), message.memberId(), message.type(), message.message());
     }
 
     @RabbitListener(bindings = @QueueBinding(
