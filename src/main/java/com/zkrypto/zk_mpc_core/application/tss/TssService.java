@@ -15,7 +15,8 @@ import com.zkrypto.zk_mpc_core.application.tss.constant.Round;
 import com.zkrypto.zk_mpc_core.application.tss.dto.ContinueMessage;
 import com.zkrypto.zk_mpc_core.application.message.dto.InitProtocolEndEvent;
 import com.zkrypto.zk_mpc_core.application.tss.dto.DelegateOutput;
-import com.zkrypto.zk_mpc_core.application.tss.dto.ProtocolData;
+import com.zkrypto.zk_mpc_core.application.tss.dto
+        .ProtocolData;
 import com.zkrypto.zk_mpc_core.common.util.JsonUtil;
 import com.zkrypto.zk_mpc_core.common.util.Web3Util;
 import com.zkrypto.zk_mpc_core.infrastucture.mpcRest.dto.response.TransactionResponse;
@@ -290,7 +291,7 @@ public class TssService {
 
     private void updatePublicKey(String sid, String message) {
         String publicKey = Web3Util.recoverPublicKey(message);
-        String address = Keys.getAddress(publicKey);
+        String address = "0x" + Keys.getAddress(publicKey);
 
         //api 호출
         mpcRestPort.setAddress(sid, publicKey, address);
@@ -299,11 +300,11 @@ public class TssService {
     private void recoverSignatureAndSend(ProtocolData protocolData, String sid, String message) {
         Map<String, Object> parsedMessage = JsonUtil.parse(message);
 
-        String publicKey = mpcRestPort.getPublicKey();
+        String publicKey = mpcRestPort.getPublicKey(sid);
         TransactionResponse lastTransaction = mpcRestPort.getLastTransaction(sid);
 
         // 블록체인 업로드
-        blockchainPort.sendTransaction(
+        String transactionHash = blockchainPort.sendTransaction(
                 protocolData.getMessageBytes(),
                 parsedMessage.get("r").toString(),
                 parsedMessage.get("s").toString(),
@@ -312,6 +313,8 @@ public class TssService {
                 lastTransaction.value(),
                 lastTransaction.toAddress()
         );
+
+        mpcRestPort.updateTransaction(lastTransaction.transactionId(), transactionHash);
     }
 
     /**

@@ -13,6 +13,7 @@ import org.web3j.protocol.core.DefaultBlockParameterName;
 import org.web3j.protocol.core.methods.response.EthGetBalance;
 import org.web3j.protocol.core.methods.response.EthSendTransaction;
 import org.web3j.protocol.http.HttpService;
+import org.web3j.utils.Convert;
 import org.web3j.utils.Numeric;
 
 import java.io.IOException;
@@ -29,9 +30,11 @@ public class Web3jService implements BlockchainPort {
     private static final long chainId = 1337;
 
     @Override
-    public void sendTransaction(byte[] message, String rHex, String sHex, String publicKey, String nonce, String value, String toAddress) {
-        RawTransaction rawTransaction = RawTransaction.createTransaction(new BigInteger(nonce), gasPrice, gasLimit, toAddress, new BigInteger(value), "");
-        byte[] encodedTxForHashing = TransactionEncoder.encode(rawTransaction, new Sign.SignatureData(BigInteger.valueOf(chainId).toByteArray(), new byte[]{}, new byte[]{}));
+    public String sendTransaction(byte[] message, String rHex, String sHex, String publicKey, String nonce, String value, String toAddress) {
+        BigInteger transferValue = Convert.toWei(value, Convert.Unit.ETHER).toBigInteger();
+        RawTransaction rawTransaction = RawTransaction.createTransaction(new BigInteger(nonce), gasPrice, gasLimit, toAddress, transferValue, "");
+        byte[] v = BigInteger.valueOf(chainId).toByteArray();
+        byte[] encodedTxForHashing = TransactionEncoder.encode(rawTransaction, new Sign.SignatureData(v, new byte[]{}, new byte[]{}));
         byte[] transactionHash = org.web3j.crypto.Hash.sha3(encodedTxForHashing);
 
         byte[] r = Numeric.hexStringToByteArray(rHex);
@@ -41,7 +44,7 @@ public class Web3jService implements BlockchainPort {
         String signedMessage = signTransaction(correctRecId, r, s, rawTransaction);
 
         try {
-            web3j.ethSendRawTransaction(signedMessage).send();
+            return web3j.ethSendRawTransaction(signedMessage).send().getTransactionHash();
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -53,7 +56,7 @@ public class Web3jService implements BlockchainPort {
 
         for (int i = 0; i < 4; i++) {
             BigInteger recoveredPublicKey = Sign.recoverFromSignature(i, sig, transactionHash);
-            if (recoveredPublicKey != null && publicKey.equals(recoveredPublicKey.toString())) {
+            if (recoveredPublicKey != null && publicKey.equals(recoveredPublicKey.toString(16).toUpperCase())) {
                 correctRecId = i;
                 break;
             }
