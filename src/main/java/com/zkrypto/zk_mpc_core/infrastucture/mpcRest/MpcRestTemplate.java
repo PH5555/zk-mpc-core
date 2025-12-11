@@ -62,7 +62,7 @@ public class MpcRestTemplate implements MpcRestPort {
         log.info("트랜잭션 조회 요청");
 
         ResponseEntity<ApiResponse<TransactionResponse>> response = restTemplate.exchange(
-                url + "/transaction/" + sid,
+                url + "/transaction/group/" + sid,
                 HttpMethod.GET,
                 null,
                 new ParameterizedTypeReference<ApiResponse<TransactionResponse>>() {}

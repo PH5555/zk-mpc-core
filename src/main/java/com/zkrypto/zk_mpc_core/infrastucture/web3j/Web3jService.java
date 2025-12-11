@@ -12,7 +12,10 @@ import org.web3j.protocol.Web3j;
 import org.web3j.protocol.core.DefaultBlockParameterName;
 import org.web3j.protocol.core.methods.response.EthGetBalance;
 import org.web3j.protocol.core.methods.response.EthSendTransaction;
+import org.web3j.protocol.core.methods.response.TransactionReceipt;
+import org.web3j.protocol.exceptions.TransactionException;
 import org.web3j.protocol.http.HttpService;
+import org.web3j.tx.response.TransactionReceiptProcessor;
 import org.web3j.utils.Convert;
 import org.web3j.utils.Numeric;
 
@@ -24,6 +27,7 @@ import java.math.BigInteger;
 @Slf4j
 public class Web3jService implements BlockchainPort {
     private final Web3j web3j;
+    private final TransactionReceiptProcessor receiptProcessor;
 
     private static final BigInteger gasPrice = BigInteger.valueOf(20_000_000_000L);
     private static final BigInteger gasLimit = BigInteger.valueOf(21_000L);
@@ -44,8 +48,20 @@ public class Web3jService implements BlockchainPort {
         String signedMessage = signTransaction(correctRecId, r, s, rawTransaction);
 
         try {
-            return web3j.ethSendRawTransaction(signedMessage).send().getTransactionHash();
+            String hash = web3j.ethSendRawTransaction(signedMessage).send().getTransactionHash();
+
+            TransactionReceipt transactionReceipt =
+                    receiptProcessor.waitForTransactionReceipt(hash);
+
+            if (transactionReceipt.isStatusOK()) {
+                return transactionReceipt.getTransactionHash().substring(0, 50);
+            }
+            else {
+                throw new RuntimeException("트랜잭션 전송 실패");
+            }
         } catch (IOException e) {
+            throw new RuntimeException(e);
+        } catch (TransactionException e) {
             throw new RuntimeException(e);
         }
     }
